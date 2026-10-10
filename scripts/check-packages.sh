@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Packs the four packages and checks the tarballs themselves: exactly the intended files, the root
 # LICENSE, and no workspace-only dependency versions. Then installs them from the tarballs into fresh
-# projects outside the repo, one per tests/consumer scenario, and builds and runs each one.
+# projects outside the repo, one per tests/consumer scenario, and builds and runs each one. The doc
+# scenarios build the whole-file examples from README.md and docs/ (see extract-doc-files.mjs).
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 DIR=$(mktemp -d)
@@ -38,7 +39,12 @@ scenario() {
   mkdir -p "$project/src"
   cp "tests/consumer/$name/rescript.json" "$project/"
   cp tests/consumer/shared/*.res "tests/consumer/$name/"*.res "$project/src/"
-  if grep -q '"sury"' "tests/consumer/$name/rescript.json"; then cp tests/consumer/shared-sury/*.res "$project/src/"; fi
+  # A doc scenario gets its doc's files instead of the shared contract.
+  if [ -n "${DOC:-}" ]; then
+    node scripts/extract-doc-files.mjs "$DOC" "$project" >/dev/null
+  elif grep -q '"sury"' "tests/consumer/$name/rescript.json"; then
+    cp tests/consumer/shared-sury/*.res "$project/src/"
+  fi
   (
     cd "$project"
     npm init -y >/dev/null
@@ -53,3 +59,7 @@ scenario handwritten "$(tgz core)"
 scenario sury-client "$(tgz core)" "$(tgz sury)" $SURY
 scenario hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
 scenario express "$(tgz core)" "$(tgz sury)" "$(tgz express)" $SURY express@5.2.1
+
+DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
+DOC=docs/getting-started.md scenario doc-getting-started "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
+DOC=docs/express.md scenario doc-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" $SURY express@5.2.1
