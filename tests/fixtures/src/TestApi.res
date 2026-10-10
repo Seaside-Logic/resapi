@@ -1,9 +1,10 @@
-// Contracts with hand-written codecs, shared by the compile-fail cases. Core only: no Sury, no server.
+// Contracts with hand-written codecs, shared by runtime tests and compile-fail cases. Core only.
 open ResApi
 
 type params = {id: string}
 type account = {id: string, name: string}
 type newAccount = {name: string}
+type memberParams = {org: string, member: int}
 
 let field = (json: JSON.t, key): result<string, Codec.error> =>
   switch json {
@@ -34,11 +35,45 @@ let newAccountCodec: Codec.t<newAccount> = {
   encode: a => JSON.Object(dict{"name": JSON.String(a.name)}),
 }
 
+// Encode-only: the client never decodes params.
+let memberParamsCodec: Codec.t<memberParams> = {
+  decode: _ => Error({path: [], message: "not used"}),
+  encode: p =>
+    JSON.Object(dict{"org": JSON.String(p.org), "member": JSON.Number(p.member->Int.toFloat)}),
+}
+
 let getAccount = Endpoint.get("/accounts/:id", ~params=paramsCodec, ~response=accountCodec)
 
 let createAccount = Endpoint.post(
   "/accounts",
   ~params=Codec.unit,
   ~body=newAccountCodec,
+  ~response=accountCodec,
+)
+
+let getMember = Endpoint.get(
+  "/orgs/:org/members/:member",
+  ~params=memberParamsCodec,
+  ~response=accountCodec,
+)
+
+// Broken params codecs, for the client's error classification.
+let encodeOnly = (encode): Codec.t<string> => {decode: _ => Error({path: [], message: "not used"}), encode}
+
+let missingParam = Endpoint.get(
+  "/accounts/:id",
+  ~params=encodeOnly(_ => JSON.Object(dict{})),
+  ~response=accountCodec,
+)
+
+let nonScalarParam = Endpoint.get(
+  "/accounts/:id",
+  ~params=encodeOnly(id => JSON.Object(dict{"id": JSON.Array([JSON.String(id)])})),
+  ~response=accountCodec,
+)
+
+let throwingParams = Endpoint.get(
+  "/accounts/:id",
+  ~params=encodeOnly(_ => JsError.throwWithMessage("cannot encode")),
   ~response=accountCodec,
 )

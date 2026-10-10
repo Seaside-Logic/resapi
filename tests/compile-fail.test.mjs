@@ -1,5 +1,5 @@
 // Each case in compile-fail/cases must fail to compile with the message in its `// expect:` line
-// (or compile, for "compiles"). Cases are copied one at a time into src/Case.res, next to the shared CaseApi.
+// (or compile, for "compiles"). Cases are copied one at a time into src/Case.res, beside the fixtures in tests/fixtures.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

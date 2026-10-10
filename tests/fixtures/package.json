@@ -1,0 +1,8 @@
+{
+  "name": "@resapi/test-fixtures",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@resapi/core": "*"
+  }
+}

@@ -3,7 +3,8 @@
   "sources": [],
   "dependencies": [
     "@resapi/core",
-    "@resapi/sury"
+    "@resapi/sury",
+    "@resapi/test-fixtures"
   ],
   "package-specs": {
     "module": "esmodule",

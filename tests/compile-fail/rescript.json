@@ -6,7 +6,8 @@
   "dependencies": [
     "@resapi/core",
     "@resapi/sury",
-    "sury"
+    "sury",
+    "@resapi/test-fixtures"
   ],
   "package-specs": {
     "module": "esmodule",

@@ -1,8 +1,8 @@
-// expect: CaseApi.params vs CaseApi.account
+// expect: TestApi.params vs TestApi.account
 // The params codec passed as the response codec doesn't fit a contract that promises an account.
 open ResApi
-let contract: Endpoint.t<CaseApi.params, unit, CaseApi.account> = Endpoint.get(
+let contract: Endpoint.t<TestApi.params, unit, TestApi.account> = Endpoint.get(
   "/accounts/:id",
-  ~params=CaseApi.paramsCodec,
-  ~response=CaseApi.paramsCodec,
+  ~params=TestApi.paramsCodec,
+  ~response=TestApi.paramsCodec,
 )

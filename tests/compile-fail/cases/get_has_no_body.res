@@ -1,8 +1,8 @@
-// expect: unit vs CaseApi.newAccount
+// expect: unit vs TestApi.newAccount
 // A GET contract's body type is fixed to unit.
 open ResApi
-let contract: Endpoint.t<_, CaseApi.newAccount, _> = Endpoint.get(
+let contract: Endpoint.t<_, TestApi.newAccount, _> = Endpoint.get(
   "/accounts/:id",
-  ~params=CaseApi.paramsCodec,
-  ~response=CaseApi.accountCodec,
+  ~params=TestApi.paramsCodec,
+  ~response=TestApi.accountCodec,
 )
