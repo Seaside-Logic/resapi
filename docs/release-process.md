@@ -30,7 +30,7 @@ No npm token is stored in GitHub at any point.
 8. Approve the `npm` environment when `release.yml` asks. It reruns `release:check`, checks that the tag matches every package version, and publishes core, sury, hono and express to `next` with provenance.
 9. Check each package on npmjs.com: version, README, license, dependencies, and the provenance badge.
 10. Smoke test from the registry in a fresh project: `npm install @resapi/core@next @resapi/sury@next @resapi/hono@next` (and Express), then build and run a contract, an endpoint and a client call.
-11. Promote all four together: `npm dist-tag add @resapi/<pkg>@<version> latest`.
+11. Promote all four together: `npm dist-tag add @resapi/<pkg>@<version> latest`. The first publish of a new package sets `latest` automatically, whatever `--tag` says, so 0.1.0 needed no promotion.
 12. Create the GitHub release for the tag from the CHANGELOG entry.
 
 The workflow skips any package whose version is already on npm. If a publish fails partway, fix the cause and rerun the workflow for the same tag. Don't retag. The same rule makes the v0.1.0 tag safe to push after the manual bootstrap publish: the run checks everything and publishes nothing.
