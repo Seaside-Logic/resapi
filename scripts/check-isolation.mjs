@@ -33,6 +33,7 @@ const isPackage = (spec, name) => spec === name || spec.startsWith(`${name}/`);
 const rules = [
   { entries: ["examples/cloudflare/src/AccountClient.res.mjs"], forbidden: ["hono", "@resapi/hono", "cloudflare:"] },
   { entries: ["examples/express/src/AccountClient.res.mjs"], forbidden: ["express", "@resapi/express", "node:"] },
+  { entries: ["examples/cloudflare/src/Worker.res.mjs"], forbidden: ["express", "@resapi/express", "node:"] },
   {
     entries: sources("packages/core/src"),
     forbidden: ["hono", "express", "sury", "@resapi/hono", "@resapi/express", "@resapi/sury", "node:", "cloudflare:"],
