@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 resAPI: contract-first HTTP toolkit for ReScript. Packages: `@resapi/core` (contracts, codecs, client; no Hono/Sury/Cloudflare imports), `@resapi/hono` (server adapter), `@resapi/sury` (Sury codec adapter). Neither adapter depends on the other.
 
