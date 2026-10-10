@@ -17,12 +17,18 @@ stop() {
 }
 trap 'stop; rm -f "$LOG"' EXIT
 
-# start <dir> <wrangler args...>: runs `wrangler dev` in the background, logging to $LOG.
+# start <dir> <wrangler args...>: runs `wrangler dev` in the background, logging to $LOG, on the next
+# free pair of ports from $PORT (HTTP, then inspector) in $URL. Each run gets its own ports: on Linux a
+# stopped Worker's workerd can still hold its ports when the next one starts.
+RUN=0
 start() {
   local dir=$1
   shift
+  local http=$((PORT + RUN * 2))
+  RUN=$((RUN + 1))
+  URL="http://localhost:$http"
   : >"$LOG"
-  (cd "$dir" && exec npx wrangler dev --port "$PORT" "$@" >"$LOG" 2>&1) &
+  (cd "$dir" && exec npx wrangler dev --port "$http" --inspector-port "$((http + 1))" "$@" >"$LOG" 2>&1) &
   PID=$!
 }
 
@@ -37,12 +43,12 @@ npx rescript
 
 start examples/cloudflare --var API_SECRET:test-secret
 wait_for "Ready on"
-RESAPI_BASE_URL="http://localhost:$PORT" node --test tests/example.test.mjs
+RESAPI_BASE_URL="$URL" node --test tests/example.test.mjs
 stop
 
 start tests/fixtures -c wrangler.probe.jsonc
 wait_for "Ready on"
-status=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$PORT/lazy-codec")
+status=$(curl -s -o /dev/null -w '%{http_code}' "$URL/lazy-codec")
 [ "$status" = 500 ] || { echo "probe: expected 500 for a codec built during a request, got $status"; exit 1; }
 wait_for "Code generation from strings disallowed"
 echo "ok - workerd rejects a Sury codec built during a request"
