@@ -4,13 +4,10 @@ open ResApi
 
 type t<'env>
 
-/** Handlers are always async: `async ctx => Fetch.Response.text("hi")`. */
 type handler<'env> = Context.t<'env> => promise<Fetch.Response.t>
 
 type next = unit => promise<unit>
 
-/** Native Hono middleware: `await next()` to continue, then return `None`; return `Some(response)`
-    to answer without calling the rest. Hono's built-in middleware binds to this type directly. */
 type middleware<'env> = (Context.t<'env>, next) => promise<option<Fetch.Response.t>>
 
 @module("hono") @new external make: unit => t<'env> = "Hono"
@@ -19,7 +16,6 @@ type middleware<'env> = (Context.t<'env>, next) => promise<option<Fetch.Response
 @send external honoUse: (t<'env>, middleware<'env>) => t<'env> = "use"
 @send external honoUseAt: (t<'env>, string, middleware<'env>) => t<'env> = "use"
 
-/** Fetch API entry point, for in-process calls and tests. */
 @send external fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t> = "fetch"
 
 // Hono's error handling only recognises JS Errors and rethrows anything else out of `fetch`, so a
@@ -43,8 +39,6 @@ let guard = (handler: handler<'env>): handler<'env> =>
 let get = (router, path, handler) => router->honoGet(path, guard(handler))
 let post = (router, path, handler) => router->honoPost(path, guard(handler))
 
-/** Runs for every request whose path matches `~path` (Hono pattern, default all), including unmatched
-    routes. The first `use` is the outermost layer. */
 let use = (router, ~path=?, middleware: middleware<'env>) => {
   let guarded = async (ctx, next) =>
     try await middleware(ctx, next) catch {

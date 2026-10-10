@@ -4,13 +4,10 @@
 
 type t
 
-/** Handlers are always async: `async (_req, res) => res->Res.send("hi")`. */
 type handler = (Req.t, Res.t) => promise<unit>
 
 type next = unit => unit
 
-/** Native Express middleware: call `next()` to continue, or answer through `res`. Express's own
-    middleware (`express.json()`, `express.static(...)`) binds to this type directly. */
 type middleware = (Req.t, Res.t, next) => unit
 
 type server
@@ -23,7 +20,6 @@ type server
 @send external expressUse: (t, middleware) => unit = "use"
 @send external expressUseAt: (t, string, middleware) => unit = "use"
 
-/** Starts a Node HTTP server. Port 0 picks a free port. */
 @send external listen: (t, int, unit => unit) => server = "listen"
 @send external close: server => unit = "close"
 
@@ -54,8 +50,6 @@ let post = (router, path, handler) => {
   router
 }
 
-/** Runs for every request whose path starts with `~path` (default all), including unmatched routes.
-    The first `use` is the outermost layer. */
 let use = (router, ~path=?, middleware: middleware) => {
   let guarded = (req, res, next) =>
     try middleware(req, res, next) catch {
