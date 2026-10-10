@@ -1,6 +1,6 @@
 # API reference
 
-This page lists the public API. Some modules export helpers that aren't listed here, such as `Client.buildPath`, `RouteCheck.parse` and `Router.honoGet`. Those are internal and may change without notice.
+This page lists the public API, which each package's `.resi` files enforce.
 
 ## `@resapi/core` (namespace `ResApi`)
 
@@ -21,7 +21,7 @@ Use `Codec.unit` as `~params` for routes without path params. A codec's `path` n
 type method = Get | Post
 type noError  // no values: the error type of endpoints that declare none
 
-type t<'params, 'body, 'response, 'error> = {
+type t<'params, 'body, 'response, 'error> = private {  // readable, but built only by get/post
   method: method,
   path: string,
   paramsCodec: Codec.t<'params>,
@@ -98,6 +98,23 @@ module Response: {
   let setHeader: (t, string, string) => t  // mutates; throws on immutable responses
 }
 ```
+
+### `Dispatch` (unstable)
+
+```rescript
+type input<'params, 'body> = {params: 'params, body: 'body}
+type response = {status: int, body: JSON.t}
+type rawBody = Text(promise<string>) | Parsed(JSON.t)
+
+let run: (
+  Endpoint.t<'p, 'b, 'r, 'e>,
+  ~params: dict<string>,
+  ~readBody: unit => rawBody,
+  ~handle: input<'p, 'b> => promise<result<'r, 'e>>,
+) => promise<response>
+```
+
+The server pipeline shared by `@resapi/hono` and `@resapi/express`. It is public only because the adapters need it, and it may change in any release. Applications don't call it.
 
 ## `@resapi/hono` (namespace `ResApiHono`)
 

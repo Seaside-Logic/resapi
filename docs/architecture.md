@@ -17,6 +17,17 @@ resAPI rests on one idea: an HTTP endpoint is a value, the contract, that both s
 
 These boundaries are checked on the compiled output by `scripts/check-isolation.mjs`. The check matters because of a ReScript detail: an `@module` external's import is emitted in the module that *calls* the external, not the one that declares it. A package's own files therefore don't show what an app ends up importing. The check walks the import graph from real entry points. Each example's client module must not reach its server framework. Core must not reach any adapter, Sury, `node:` or `cloudflare:`, and no adapter reaches another. Positive controls confirm that the Worker entry reaches Hono and the Express example's server entry reaches Express.
 
+### Public interfaces
+
+Every module with internals has a `.resi`. These files are the compatibility boundary, and anything they leave out is internal. `Endpoint.t` and `EndpointHandler.route` are `private` records: adapters can read their fields, but only `Endpoint.get`/`post` can build a contract, so no contract skips route checking. `scripts/check-packages.sh` packs each package and installs it into a fresh project outside the repo, so the packages are also tested the way users get them.
+
+**Decision: `Dispatch` is public but unstable.**
+- *Problem:* both adapters need `Dispatch.run`, but it isn't meant as an API yet.
+- *Options:* make it package-internal, make it a documented extension point, or make it public but unstable.
+- *Decision:* public, marked unstable in `Dispatch.resi` and the API reference.
+- *Reason:* ReScript can't make a module visible to other packages without exposing it to everyone. Promising stability before any third-party adapter exists would be premature.
+- *Consequences:* `Dispatch` can change in any 0.x release, and third-party adapters that use it do so at their own risk.
+
 ## Codecs
 
 ```rescript
