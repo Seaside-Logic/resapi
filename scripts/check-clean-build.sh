@@ -25,7 +25,10 @@ must_break() {
     echo "FAIL - incremental build succeeded after: $description"
     exit 1
   fi
+  # Restoring the backup also restores its old mtime, which rewatch would take as "unchanged". A real
+  # revert (editor save, git checkout) writes a new mtime, so touch it.
   mv "$file.bak" "$file"
+  touch "$file"
   npx rescript >"$DIR/build.log" 2>&1 || { cat "$DIR/build.log"; echo "FAIL - build broken after reverting: $description"; exit 1; }
   echo "ok - incremental build catches: $description"
 }
