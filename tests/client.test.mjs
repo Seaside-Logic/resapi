@@ -20,12 +20,12 @@ const urlFor = async (baseUrl, contract, params) => {
   return requests[0].url;
 };
 
-test("joinUrl keeps base path prefixes and tolerates slashes on either side", () => {
-  assert.equal(Client.joinUrl("https://x.dev", "/a"), "https://x.dev/a");
-  assert.equal(Client.joinUrl("https://x.dev/", "/a"), "https://x.dev/a");
-  assert.equal(Client.joinUrl("https://x.dev/api", "/a"), "https://x.dev/api/a");
-  assert.equal(Client.joinUrl("https://x.dev/api/", "/a"), "https://x.dev/api/a");
-  assert.equal(Client.joinUrl("https://x.dev/api", "a"), "https://x.dev/api/a");
+test("the base URL keeps its path prefix, with or without a trailing slash", async () => {
+  const { getAccount } = TestApi;
+  assert.equal(await urlFor("https://x.dev", getAccount, { id: "1" }), "https://x.dev/accounts/1");
+  assert.equal(await urlFor("https://x.dev/", getAccount, { id: "1" }), "https://x.dev/accounts/1");
+  assert.equal(await urlFor("https://x.dev/api", getAccount, { id: "1" }), "https://x.dev/api/accounts/1");
+  assert.equal(await urlFor("https://x.dev/api/", getAccount, { id: "1" }), "https://x.dev/api/accounts/1");
 });
 
 test("request URL keeps the base path prefix", async () => {

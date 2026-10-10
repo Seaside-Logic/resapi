@@ -13,7 +13,6 @@ type error<'e> =
 @val external globalFetch: Fetch.Request.t => promise<Fetch.Response.t> = "fetch"
 @val external encodeURIComponent: string => string = "encodeURIComponent"
 
-/** `~fetch` defaults to the global fetch; pass another to call in-process or to fake a server. */
 let make = (~baseUrl, ~fetch=globalFetch) => {baseUrl, fetch}
 
 /** Appends the path to the base URL, keeping any path prefix in the base: `https://x.dev/api/` + `/a` is `https://x.dev/api/a`. */
@@ -122,7 +121,6 @@ let send = async (client, contract: Endpoint.t<_, _, _, _>, ~params, ~body) => {
   }
 }
 
-/** For contracts without a request body (`'body = unit`). */
 let call = (client, contract, ~params) => send(client, contract, ~params, ~body=())
 
 let callWithBody = send

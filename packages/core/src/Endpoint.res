@@ -4,8 +4,6 @@
 
 type method = Get | Post
 
-/** The error type of an endpoint that declares no application errors. It has no values, so a handler
-    for such an endpoint cannot return `Error(_)`. */
 type noError
 
 type t<'params, 'body, 'response, 'error> = {
@@ -50,7 +48,6 @@ let post = (path, ~params, ~body, ~response) => {
   }
 }
 
-/** Declares the endpoint's application errors and the HTTP status (4xx or 5xx) each one is sent with. */
 let withErrors = (contract: t<'p, 'b, 'r, noError>, errorCodec: Codec.t<'e>, ~status) => {
   ...contract,
   errorCodec,

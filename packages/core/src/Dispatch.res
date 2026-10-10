@@ -6,7 +6,6 @@ type input<'params, 'body> = {params: 'params, body: 'body}
 
 type response = {status: int, body: JSON.t}
 
-/** The request body, as the adapter has it. `Parsed` is JSON already parsed by framework middleware. */
 type rawBody = Text(promise<string>) | Parsed(JSON.t)
 
 let errorResponse = (~status, ~kind, ~message, ~path=[]) => {
@@ -71,9 +70,6 @@ let respond = async (contract: Endpoint.t<_, _, _, _>, ~params, ~readBody, ~hand
   }
 }
 
-/** `readBody` is called only for POST, after params decode. `handle` must return one of the contract's
-    declared errors. Any exception from a codec or `handle` is logged and answered with a 500 that
-    reveals nothing. */
 let run = async (
   contract: Endpoint.t<'params, 'body, 'response, 'error>,
   ~params: dict<string>,

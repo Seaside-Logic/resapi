@@ -76,7 +76,6 @@ let check = (path, codec) =>
     }
   }
 
-/** Throws on Invalid, so a bad top-level contract stops the module (and the Worker) from loading. */
 let assertValid = (path, codec) =>
   switch check(path, codec) {
   | Invalid(details) => JsError.throwWithMessage(`Invalid route "${path}": ${details}`)
