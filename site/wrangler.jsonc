@@ -1,0 +1,8 @@
+// resapi.dev: a static landing page served as Workers static assets. Deploy with `npx wrangler deploy`
+// from this directory (see README.md). Not part of the npm workspace.
+{
+  "name": "resapi-site",
+  "compatibility_date": "2026-10-01",
+  "assets": {"directory": "./public"},
+  "routes": [{"pattern": "resapi.dev", "custom_domain": true}]
+}

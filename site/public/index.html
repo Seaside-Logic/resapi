@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>resAPI: type-safe HTTP contracts for ReScript</title>
+<meta name="description" content="Define an HTTP API once in ReScript. Share types and validation between clients and servers, on Hono, Express or Cloudflare Workers.">
+<link rel="canonical" href="https://resapi.dev/">
+<meta property="og:title" content="resAPI: type-safe HTTP contracts for ReScript">
+<meta property="og:description" content="Define your API once. Share types and validation between clients and servers.">
+<meta property="og:url" content="https://resapi.dev/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e6484f'/%3E%3Cpath d='M9 9h8a5 5 0 0 1 0 10h-2l5 5h-4l-5-5v5H9z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #fbfaf8; --fg: #1d1b19; --muted: #625d57; --line: #e6e1da;
+  --code-bg: #f2efea; --accent: #c9343b; --accent-soft: #fbe9ea; --on-accent: #fff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151413; --fg: #ece8e3; --muted: #a39d96; --line: #2c2926;
+    --code-bg: #1e1c1a; --accent: #f06a70; --accent-soft: #2a1a1b; --on-accent: #1d1b19;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 17px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+a { color: var(--accent); }
+header { padding: 72px 0 40px; }
+.brand { font-weight: 700; letter-spacing: -0.01em; color: var(--muted); margin: 0 0 24px; }
+.brand span { color: var(--accent); }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 16px; max-width: 16ch; }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 52ch; margin: 0 0 28px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.button {
+  display: inline-block; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600;
+  background: var(--accent); color: var(--on-accent);
+}
+.button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.install {
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-top: 28px;
+  overflow-x: auto; white-space: nowrap;
+}
+section { padding: 32px 0; border-top: 1px solid var(--line); }
+h2 { font-size: 1.35rem; margin: 0 0 8px; letter-spacing: -0.01em; }
+.step { color: var(--muted); margin: 0 0 12px; }
+pre {
+  margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; overflow-x: auto; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.file { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); margin: 0 0 6px; }
+.k { color: var(--accent); }
+.c { color: var(--muted); }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; list-style: none; margin: 16px 0 0; }
+.features li { border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.features strong { display: block; margin-bottom: 4px; }
+.features p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.packages { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
+.packages td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.packages td:first-child { white-space: nowrap; font-family: ui-monospace, Menlo, monospace; }
+.note { background: var(--accent-soft); border-radius: 8px; padding: 12px 16px; margin-top: 20px; font-size: 0.95rem; }
+footer { padding: 32px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+footer a { color: inherit; }
+@media (max-width: 600px) { header { padding: 48px 0 32px; } pre { font-size: 13px; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="brand">res<span>API</span></p>
+  <h1>Type-safe HTTP contracts for ReScript</h1>
+  <p class="lede">Define your API once. Share types and validation between clients and servers, on Hono, Express or Cloudflare Workers.</p>
+  <div class="actions">
+    <a class="button" href="https://github.com/Seaside-Logic/resapi/blob/main/docs/getting-started.md">Get started</a>
+    <a class="button secondary" href="https://github.com/Seaside-Logic/resapi">GitHub</a>
+    <a class="button secondary" href="https://www.npmjs.com/package/@resapi/core">npm</a>
+  </div>
+  <div class="install">npm install @resapi/core @resapi/hono @resapi/sury hono sury sury-ppx</div>
+</header>
+
+<section>
+  <h2>1. Describe the endpoint</h2>
+  <p class="step">A contract names the route, the params, the response and the errors the endpoint can return. Clients and servers both import it.</p>
+  <p class="file">AccountApi.res</p>
+<pre><span class="k">open</span> ResApi
+
+@schema <span class="k">type</span> params = {id: string}
+@schema <span class="k">type</span> account = {id: string, name: string, balance: float}
+@schema <span class="k">type</span> accountError = | @as("not_found") NotFound
+
+<span class="k">let</span> getAccount =
+  Endpoint.get(
+    "/accounts/:id",
+    ~params=SuryCodec.make(paramsSchema),
+    ~response=SuryCodec.make(accountSchema),
+  )-&gt;Endpoint.withErrors(SuryCodec.make(accountErrorSchema), ~status=error =&gt;
+    <span class="k">switch</span> error {
+    | NotFound =&gt; 404
+    }
+  )</pre>
+</section>
+
+<section>
+  <h2>2. Implement it</h2>
+  <p class="step">The handler receives decoded, validated params. Returning a field the contract doesn't have, or an error it doesn't declare, is a compile error.</p>
+  <p class="file">App.res</p>
+<pre><span class="k">open</span> ResApiHono
+
+<span class="k">let</span> app: Router.t&lt;unit&gt; =
+  Router.make()
+  -&gt;Router.register(
+    AccountApi.getAccount-&gt;EndpointHandler.make(<span class="k">async</span> (_ctx, {params}) =&gt;
+      <span class="k">switch</span> accounts-&gt;Dict.get(params.id) {
+      | Some(account) =&gt; Ok(account)
+      | None =&gt; Error(NotFound)
+      }
+    ),
+  )
+
+<span class="c">// A router is a Hono app, so it is already a Cloudflare Worker.</span>
+<span class="k">let</span> default = app</pre>
+</section>
+
+<section>
+  <h2>3. Call it</h2>
+  <p class="step">The client builds the URL, validates the response, and returns every outcome as a typed case.</p>
+  <p class="file">AccountClient.res</p>
+<pre><span class="k">switch</span> <span class="k">await</span> client-&gt;Client.call(AccountApi.getAccount, ~params={id: id}) {
+| Ok(account) =&gt; account.name
+| Error(Application({error: NotFound})) =&gt; "no such account"
+| Error(_) =&gt; "request failed"
+}</pre>
+</section>
+
+<section>
+  <h2>Why resAPI</h2>
+  <ul class="features">
+    <li><strong>One definition</strong><p>Server handlers and client calls take their types from the same contract value, with no generated code.</p></li>
+    <li><strong>Validated at both ends</strong><p>Requests are decoded before your handler runs. Responses are decoded before your code sees them.</p></li>
+    <li><strong>Typed application errors</strong><p>Declare <code>NotFound</code> or <code>AccessDenied</code> with their statuses. They never mix with network or validation failures.</p></li>
+    <li><strong>Native frameworks</strong><p>A router is a Hono or Express app, so their middleware works as is.</p></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Packages</h2>
+  <table class="packages">
+    <tr><td><a href="https://www.npmjs.com/package/@resapi/core">@resapi/core</a></td><td>Contracts, codecs and the typed client. Depends only on Fetch.</td></tr>
+    <tr><td><a href="https://www.npmjs.com/package/@resapi/hono">@resapi/hono</a></td><td>Hono adapter, for Node and Cloudflare Workers.</td></tr>
+    <tr><td><a href="https://www.npmjs.com/package/@resapi/express">@resapi/express</a></td><td>Express 5 adapter.</td></tr>
+    <tr><td><a href="https://www.npmjs.com/package/@resapi/sury">@resapi/sury</a></td><td>Sury schemas as codecs. Hand-written codecs work too.</td></tr>
+  </table>
+  <p class="note">0.1.0 is a preview: the API may change in 0.x releases. See the <a href="https://github.com/Seaside-Logic/resapi/blob/main/CHANGELOG.md">changelog</a> for tested versions and known limitations.</p>
+</section>
+
+<footer>
+  <a href="https://github.com/Seaside-Logic/resapi/tree/main/docs">Documentation</a> ·
+  <a href="https://github.com/Seaside-Logic/resapi">GitHub</a> ·
+  MIT License · © Seaside Logic
+</footer>
+</main>
+</body>
+</html>
