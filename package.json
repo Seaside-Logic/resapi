@@ -2,7 +2,11 @@
   "name": "resapi",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "examples/*"],
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "tests/compile-fail"
+  ],
   "scripts": {
     "build": "rescript",
     "watch": "rescript watch",
@@ -10,7 +14,9 @@
     "format": "rescript format",
     "test": "rescript && node --test"
   },
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "rescript": "12.3.1"
   }

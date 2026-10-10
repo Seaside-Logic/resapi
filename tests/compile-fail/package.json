@@ -1,0 +1,8 @@
+{
+  "name": "@resapi/compile-fail",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@resapi/core": "*"
+  }
+}

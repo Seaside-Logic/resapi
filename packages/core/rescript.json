@@ -1,0 +1,7 @@
+{
+  "name": "@resapi/core",
+  "sources": {"dir": "src"},
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs",
+  "namespace": "ResApi"
+}
