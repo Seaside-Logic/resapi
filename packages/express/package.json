@@ -1,0 +1,35 @@
+{
+  "name": "@resapi/express",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Express server adapter for resAPI contracts.",
+  "license": "MIT",
+  "homepage": "https://resapi.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasidelogic/resapi.git",
+    "directory": "packages/express"
+  },
+  "keywords": [
+    "rescript",
+    "http",
+    "api",
+    "contract",
+    "typed-client",
+    "express",
+    "node"
+  ],
+  "type": "module",
+  "files": [
+    "src/*.res",
+    "src/*.resi",
+    "rescript.json"
+  ],
+  "dependencies": {
+    "@resapi/core": "*",
+    "express": "5.2.1"
+  },
+  "peerDependencies": {
+    "rescript": "^12.3.1"
+  }
+}

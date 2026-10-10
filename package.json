@@ -18,7 +18,8 @@
     "dev": "npm run build && npm run dev -w examples/cloudflare",
     "format:check": "rescript format --check",
     "check:isolation": "node scripts/check-isolation.mjs",
-    "check:clean-build": "scripts/check-clean-build.sh"
+    "check:clean-build": "scripts/check-clean-build.sh",
+    "dev:express": "npm run build && npm start -w examples/express"
   },
   "engines": {
     "node": ">=22"

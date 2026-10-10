@@ -5,16 +5,17 @@ resAPI rests on one idea: an HTTP endpoint is a value, the contract, that both s
 ## Packages and dependencies
 
 ```text
-        @resapi/core
-           ▲     ▲
-  @resapi/hono   @resapi/sury
+                 @resapi/core
+           ▲          ▲          ▲
+  @resapi/hono  @resapi/express  @resapi/sury
 ```
 
-- **`@resapi/core`** has `Codec`, `Endpoint`, `RouteCheck`, `Client` and `Fetch`. It depends only on the ReScript runtime and the Fetch API.
+- **`@resapi/core`** has `Codec`, `Endpoint`, `RouteCheck`, `Client`, `Fetch` and `Dispatch` (the server pipeline shared by adapters, see below). It depends only on the ReScript runtime and the Fetch API.
 - **`@resapi/hono`** has `Router`, `EndpointHandler` and `Context`. It depends on core and Hono.
+- **`@resapi/express`** has `Router`, `EndpointHandler`, `Req` and `Res`. It depends on core and Express.
 - **`@resapi/sury`** has `SuryCodec`. It depends on core and Sury.
 
-These boundaries are checked on the compiled output by `scripts/check-isolation.mjs`. The check matters because of a ReScript detail: an `@module` external's import is emitted in the module that *calls* the external, not the one that declares it. A package's own files therefore don't show what an app ends up importing. The check walks the import graph from real entry points. The example's client module must not reach Hono or Cloudflare. Core must not reach any adapter, Sury, `node:` or `cloudflare:`. A positive control confirms that the Worker entry does reach Hono.
+These boundaries are checked on the compiled output by `scripts/check-isolation.mjs`. The check matters because of a ReScript detail: an `@module` external's import is emitted in the module that *calls* the external, not the one that declares it. A package's own files therefore don't show what an app ends up importing. The check walks the import graph from real entry points. Each example's client module must not reach its server framework. Core must not reach any adapter, Sury, `node:` or `cloudflare:`, and no adapter reaches another. Positive controls confirm that the Worker entry reaches Hono and the Express example's server entry reaches Express.
 
 ## Codecs
 
@@ -61,7 +62,7 @@ Hono provides routing, path matching and Fetch integration. resAPI uses Hono's f
 - **Native middleware.** `Router.middleware<'env>` is Hono's `(c, next)` shape, returning `option<Response>`. Hono's built-in middleware (`hono/logger`, `hono/bearer-auth`, `hono/cors`, ...) binds with a single external, and the tests cover logger and bearer-auth. Middleware sees Hono's native semantics. A handler's exception has already become a 500 response by the time outer middleware runs, so middleware can't catch it.
 - **One adaptation.** Hono's error handling (`compose`, `onError`) only handles values that are `instanceof Error` and rethrows anything else out of `app.fetch`. Raw ReScript exceptions are plain objects, so without help they would escape and fail the request with no response. `Router.get`/`post`/`use` therefore catch non-`Error` exceptions and rethrow them as JS `Error`s. JS errors, including Hono's `HTTPException`, pass through untouched, and Hono's default `onError` (log, then a plain 500) handles both. This relies only on documented Hono behaviour.
 
-**Typed endpoints.** `EndpointHandler.make(contract, handler)` closes over the contract's types and returns a non-generic `route<'env>`. Endpoints of different types can therefore be registered on one router without a heterogeneous collection or any casts. Request handling runs in this order:
+**Typed endpoints.** `EndpointHandler.make(contract, handler)` closes over the contract's types and returns a non-generic `route<'env>`. Endpoints of different types can therefore be registered on one router without a heterogeneous collection or any casts. The request pipeline is core's `Dispatch.run`, which every adapter shares, so the wire format has one definition. The adapter supplies the raw params and body and sends the `{status, body}` it gets back. Request handling runs in this order:
 
 1. Decode the path params, without touching the body: `400 invalid_params`.
 2. Parse the JSON body: `400 malformed_json`.
@@ -69,6 +70,15 @@ Hono provides routing, path matching and Fetch integration. resAPI uses Hono's f
 4. Run the handler, then encode `Ok` or the declared error.
 
 Any exception from a codec or handler is logged as the JS `Error` itself, so the stack is preserved. The client gets `500 {"error": {"kind": "internal", "message": "Internal Server Error"}}` and no detail.
+
+## Server adapter: Express
+
+`@resapi/express` follows the Hono adapter's shape on Express 5:
+
+- **`Router.t` is the Express app**, so `app.listen` and any unwrapped Express API are one external away. It has no `'env` parameter, because Express has no bindings object; read configuration from `process.env`.
+- **Native handlers and middleware.** Plain routes take `(req, res) => promise<unit>`. Middleware is Express's `(req, res, next) => unit`, so `express.json()`, `express.static` and similar bind with a single external.
+- **Errors.** Express 5 passes a rejected handler promise to its error handler. As on Hono, `Router.get`/`post`/`use` rethrow raw ReScript exceptions as JS `Error`s, here so that Express's handler logs a stack instead of `[object Object]`. Express's default handler shows the stack in the response body unless `NODE_ENV=production`; that is Express's behaviour, and typed endpoints never reach it.
+- **Request bodies.** `Router.register` mounts POST endpoints behind `express.text({type: () => true})`, so `Dispatch` sees the raw body and reports `malformed_json` exactly as on Hono. If an upstream `express.json()` has already parsed the body, the parsed value is used.
 
 ## Typed application errors
 

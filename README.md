@@ -14,7 +14,7 @@ Website (planned): https://resapi.dev
 - **Runtime validation at both boundaries.** The server decodes params and bodies before your handler runs. The client decodes responses before you see them, with no casts.
 - **Compile-time checking.** Wrong param fields, wrong body types, wrong handler results and undeclared errors are compile errors.
 - **Typed application errors.** An endpoint declares its expected failures (`NotFound`, `AccessDenied`) and their HTTP statuses. They stay separate from network, validation and server errors.
-- **Runtime independence.** Contracts and the client depend only on Fetch. The server adapter uses Hono and runs on Cloudflare Workers with no JS glue.
+- **Runtime independence.** Contracts and the client depend only on Fetch. Server adapters exist for Hono (runs on Cloudflare Workers with no JS glue) and Express (Node).
 
 ## Example
 
@@ -85,9 +85,10 @@ switch await client->Client.call(AccountApi.getAccount, ~params={id: "acct_123"}
 | --- | --- | --- |
 | `@resapi/core` | Contracts (`Endpoint`), codecs (`Codec`), route checking, typed `Client`, Fetch bindings | ReScript only |
 | `@resapi/hono` | `Router`, `EndpointHandler`, `Context`: runs contracts on Hono | core, `hono` |
+| `@resapi/express` | `Router`, `EndpointHandler`, `Req`, `Res`: runs contracts on Express | core, `express` |
 | `@resapi/sury` | `SuryCodec.make`: Sury schema → `Codec.t` | core, `sury` |
 
-Neither adapter depends on the other, and core depends on neither. Any codec that implements the two-function `Codec.t` interface works.
+No adapter depends on another, and core depends on none of them. Any codec that implements the two-function `Codec.t` interface works.
 
 ## Documentation
 

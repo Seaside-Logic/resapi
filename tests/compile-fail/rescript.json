@@ -8,7 +8,8 @@
     "@resapi/sury",
     "sury",
     "@resapi/test-fixtures",
-    "@resapi/hono"
+    "@resapi/hono",
+    "@resapi/express"
   ],
   "package-specs": {
     "module": "esmodule",

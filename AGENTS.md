@@ -1,6 +1,6 @@
 # AGENTS.md
 
-resAPI: contract-first HTTP toolkit for ReScript. Packages: `@resapi/core` (contracts, codecs, client; no Hono/Sury/Cloudflare imports), `@resapi/hono` (server adapter), `@resapi/sury` (Sury codec adapter). Neither adapter depends on the other.
+resAPI: contract-first HTTP toolkit for ReScript. Packages: `@resapi/core` (contracts, codecs, client, adapter-neutral `Dispatch`; no Hono/Express/Sury/Cloudflare imports), `@resapi/hono` and `@resapi/express` (server adapters), `@resapi/sury` (Sury codec adapter). No adapter depends on another. Examples: `examples/cloudflare` (Hono on Workers), `examples/express` (Express on Node, namespaced `ExpressExample`).
 
 ## Commands
 

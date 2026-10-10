@@ -32,9 +32,14 @@ const isPackage = (spec, name) => spec === name || spec.startsWith(`${name}/`);
 
 const rules = [
   { entries: ["examples/cloudflare/src/AccountClient.res.mjs"], forbidden: ["hono", "@resapi/hono", "cloudflare:"] },
-  { entries: sources("packages/core/src"), forbidden: ["hono", "sury", "@resapi/hono", "@resapi/sury", "node:", "cloudflare:"] },
-  { entries: sources("packages/sury/src"), forbidden: ["hono", "@resapi/hono"] },
-  { entries: sources("packages/hono/src"), forbidden: ["sury", "@resapi/sury"] },
+  { entries: ["examples/express/src/AccountClient.res.mjs"], forbidden: ["express", "@resapi/express", "node:"] },
+  {
+    entries: sources("packages/core/src"),
+    forbidden: ["hono", "express", "sury", "@resapi/hono", "@resapi/express", "@resapi/sury", "node:", "cloudflare:"],
+  },
+  { entries: sources("packages/sury/src"), forbidden: ["hono", "express", "@resapi/hono", "@resapi/express"] },
+  { entries: sources("packages/hono/src"), forbidden: ["sury", "express", "@resapi/sury", "@resapi/express"] },
+  { entries: sources("packages/express/src"), forbidden: ["sury", "hono", "@resapi/sury", "@resapi/hono"] },
 ];
 
 let failed = false;
@@ -50,13 +55,19 @@ for (const { entries, forbidden } of rules) {
   }
 }
 
-// Positive control: the server entry must reach hono, or the walk is broken and every check above is vacuous.
-const server = externalsReachable("examples/cloudflare/src/Worker.res.mjs");
-if (![...server].some(spec => isPackage(spec, "hono"))) {
-  failed = true;
-  console.error("FAIL control: Worker.res.mjs should reach hono but the walk found none");
-} else {
-  console.log(`ok   control: Worker.res.mjs reaches ${[...server].sort().join(", ")}`);
+// Positive controls: each server entry must reach its framework, or the walk is broken and every check
+// above is vacuous.
+for (const [entry, framework] of [
+  ["examples/cloudflare/src/Worker.res.mjs", "hono"],
+  ["examples/express/src/Server.res.mjs", "express"],
+]) {
+  const server = externalsReachable(entry);
+  if (![...server].some(spec => isPackage(spec, framework))) {
+    failed = true;
+    console.error(`FAIL control: ${entry} should reach ${framework} but the walk found none`);
+  } else {
+    console.log(`ok   control: ${entry} reaches ${[...server].sort().join(", ")}`);
+  }
 }
 
 process.exit(failed ? 1 : 0);

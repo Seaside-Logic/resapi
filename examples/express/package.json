@@ -1,0 +1,16 @@
+{
+  "name": "@resapi/example-express",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/Server.res.mjs"
+  },
+  "dependencies": {
+    "@resapi/core": "*",
+    "@resapi/express": "*",
+    "@resapi/sury": "*",
+    "express": "5.2.1",
+    "sury": "11.0.0",
+    "sury-ppx": "11.0.0"
+  }
+}

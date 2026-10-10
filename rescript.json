@@ -6,7 +6,9 @@
     "@resapi/hono",
     "@resapi/sury",
     "@resapi/test-fixtures",
-    "@resapi/example-cloudflare"
+    "@resapi/example-cloudflare",
+    "@resapi/express",
+    "@resapi/example-express"
   ],
   "package-specs": {
     "module": "esmodule",

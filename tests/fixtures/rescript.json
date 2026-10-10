@@ -7,7 +7,8 @@
     "@resapi/core",
     "@resapi/hono",
     "@resapi/sury",
-    "sury"
+    "sury",
+    "@resapi/express"
   ],
   "package-specs": {
     "module": "esmodule",

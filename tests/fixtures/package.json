@@ -7,6 +7,8 @@
     "@resapi/hono": "*",
     "hono": "4.13.13",
     "@resapi/sury": "*",
-    "sury": "11.0.0"
+    "sury": "11.0.0",
+    "@resapi/express": "*",
+    "express": "5.2.1"
   }
 }
