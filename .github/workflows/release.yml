@@ -38,9 +38,15 @@ jobs:
             fi
           done
       # Dependency order: the adapters depend on core. Each publish must succeed before the next starts.
-      # Releases go to the `next` tag; promote them to `latest` by hand (docs/release-process.md).
+      # A version already on npm is skipped, so a release that failed partway can be finished by rerunning
+      # this workflow. Releases go to the `next` tag; promote them to `latest` by hand (docs/release-process.md).
       - name: Publish
         run: |
+          version=${GITHUB_REF_NAME#v}
           for pkg in core sury hono express; do
+            if npm view "@resapi/$pkg@$version" version >/dev/null 2>&1; then
+              echo "@resapi/$pkg@$version is already published, skipping"
+              continue
+            fi
             npm publish --workspace="@resapi/$pkg" --access public --tag next --provenance
           done

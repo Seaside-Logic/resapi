@@ -3,6 +3,9 @@
 # LICENSE, and no workspace-only dependency versions. Then installs them from the tarballs into fresh
 # projects outside the repo, one per tests/consumer scenario, and builds and runs each one. The doc
 # scenarios build the whole-file examples from README.md and docs/ (see extract-doc-files.mjs).
+#
+# RESAPI_FROM=<dist-tag> (e.g. next) skips packing and installs the published packages from the npm
+# registry instead: the smoke test after a release.
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 DIR=$(mktemp -d)
@@ -11,7 +14,9 @@ cd "$REPO"
 
 fail() { echo "FAIL - $*"; exit 1; }
 
+FROM=${RESAPI_FROM:-}
 for pkg in core hono express sury; do
+  [ -z "$FROM" ] || break
   npm pack --silent --workspace="@resapi/$pkg" --pack-destination "$DIR" >/dev/null
   tarball=$(ls "$DIR"/resapi-$pkg-*.tgz)
 
@@ -28,9 +33,10 @@ $(diff <(echo "$expected") <(echo "$actual") || true)"
   echo "ok - @resapi/$pkg tarball: $(wc -l <<<"$actual" | tr -d ' ') files"
 done
 
-tgz() { ls "$DIR"/resapi-$1-*.tgz; }
+# tgz <pkg>: what to install for a package, the packed tarball or the published dist-tag.
+tgz() { if [ -n "$FROM" ]; then echo "@resapi/$1@$FROM"; else ls "$DIR"/resapi-"$1"-*.tgz; fi; }
 RESCRIPT=$(node -p 'require("./package.json").devDependencies.rescript')
-SURY="sury@11.0.0 sury-ppx@11.0.0"
+SURY=(sury@11.0.0 sury-ppx@11.0.0)
 
 # scenario <dir> <packages to install...>: a fresh npm project in $DIR, outside the repo and its workspace.
 scenario() {
@@ -56,10 +62,10 @@ scenario() {
 }
 
 scenario handwritten "$(tgz core)"
-scenario sury-client "$(tgz core)" "$(tgz sury)" $SURY
-scenario hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
-scenario express "$(tgz core)" "$(tgz sury)" "$(tgz express)" $SURY express@5.2.1
+scenario sury-client "$(tgz core)" "$(tgz sury)" "${SURY[@]}"
+scenario hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+scenario express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
 
-DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
-DOC=docs/getting-started.md scenario doc-getting-started "$(tgz core)" "$(tgz sury)" "$(tgz hono)" $SURY hono@4.13.13
-DOC=docs/express.md scenario doc-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" $SURY express@5.2.1
+DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+DOC=docs/getting-started.md scenario doc-getting-started "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+DOC=docs/express.md scenario doc-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1

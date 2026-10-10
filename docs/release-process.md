@@ -33,7 +33,7 @@ No npm token is stored in GitHub at any point.
 11. Promote all four together: `npm dist-tag add @resapi/<pkg>@<version> latest`.
 12. Create the GitHub release for the tag from the CHANGELOG entry.
 
-If a publish fails partway, don't retag. Fix the cause, then publish the remaining packages by hand from the tagged commit, in order.
+The workflow skips any package whose version is already on npm. If a publish fails partway, fix the cause and rerun the workflow for the same tag. Don't retag. The same rule makes the v0.1.0 tag safe to push after the manual bootstrap publish: the run checks everything and publishes nothing.
 
 ## Documentation layout
 

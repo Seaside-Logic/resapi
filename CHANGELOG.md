@@ -37,6 +37,10 @@ ReScript 12.3.1, Node 22 and 24, Hono 4.13, Express 5.2, Sury 11.0, and Cloudfla
 - `Dispatch` is public only because the adapters need it. It may change in any release.
 - Unexpected exceptions are logged with `console.error`. There is no hook for an error reporter yet.
 
+### Provenance
+
+0.1.0 was published from a maintainer's machine to create the packages on npm, so it has no provenance attestation. Later versions are published by the tag-triggered GitHub workflow with provenance.
+
 ### Stability
 
 This is a preview. The API may change in 0.x minor releases, and each change will be listed here with migration notes.
