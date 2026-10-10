@@ -57,32 +57,57 @@ type t
 type error<'e> =
   | Application({status: int, error: 'e})
   | Network(string)
+  | Aborted
   | UnexpectedStatus({status: int, body: string})
   | InvalidResponse(Codec.error)
   | InvalidParams(string)
   | EncodeFailed(string)
 
-let make: (~baseUrl: string, ~fetch: Fetch.Request.t => promise<Fetch.Response.t>=?) => t
+let make: (
+  ~baseUrl: string,
+  ~fetch: Fetch.Request.t => promise<Fetch.Response.t>=?,
+  ~headers: dict<string>=?,  // sent with every call
+) => t
 
-let call: (t, Endpoint.t<'p, unit, 'r, 'e>, ~params: 'p) => promise<result<'r, error<'e>>>
-let callWithBody: (t, Endpoint.t<'p, 'b, 'r, 'e>, ~params: 'p, ~body: 'b) => promise<result<'r, error<'e>>>
+let call: (
+  t, Endpoint.t<'p, unit, 'r, 'e>, ~params: 'p,
+  ~headers: dict<string>=?, ~signal: Fetch.AbortSignal.t=?,
+) => promise<result<'r, error<'e>>>
+let callWithBody: (
+  t, Endpoint.t<'p, 'b, 'r, 'e>, ~params: 'p, ~body: 'b,
+  ~headers: dict<string>=?, ~signal: Fetch.AbortSignal.t=?,
+) => promise<result<'r, error<'e>>>
 ```
 
 - **`make`:** `~fetch` defaults to the global `fetch`.
+- **Headers:** per-call `~headers` override the client's, and both override resAPI's `content-type`. Names are case-insensitive.
+- **`~signal`:** a Fetch `AbortSignal`. Aborting it, or its timeout firing, returns `Error(Aborted)`.
 - **`baseUrl`:** keeps its path prefix, and a trailing slash is optional. An invalid `baseUrl` throws.
 - **`call`:** for contracts without a body.
 - **`callWithBody`:** for POST contracts.
 
-The [architecture document](architecture.md#typed-application-errors) explains each error variant.
+[Errors](errors.md#on-the-client) explains each error variant.
 
 ### `Fetch`
 
 These are thin bindings to the Fetch API, used by the client and by handlers.
 
 ```rescript
+module AbortSignal: {
+  type t
+  let timeout: int => t  // aborts after the given milliseconds
+}
+
+module AbortController: {
+  type t
+  let make: unit => t
+  let signal: t => AbortSignal.t
+  let abort: t => unit
+}
+
 module Request: {
   type t
-  type init = {method?: string, headers?: dict<string>, body?: string}
+  type init = {method?: string, headers?: dict<string>, body?: string, signal?: AbortSignal.t}
   let make: (string, ~init: init=?) => t
 }
 
@@ -137,7 +162,7 @@ let fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t>
 - **The router is a Hono app.** It's a mutable builder, so `get`, `post`, `use` and `register` add to the app and return it for piping. A router is a valid Worker default export.
 - **`'env`:** the bindings type. A router that never reads `Context.env` must be annotated, as in `Router.t<unit>`.
 - **`use`:** takes native Hono middleware. Hono's built-in middleware binds directly, for example `@module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"`. Middleware runs in registration order, with the first `use` as the outermost layer, and it also runs for unmatched routes.
-- **Exceptions:** any exception from a handler or middleware ends as Hono's plain, logged 500.
+- **Exceptions:** an exception from a plain handler or middleware ends as Hono's plain, logged 500.
 - **`fetch`:** calls the app in-process.
 
 ### `Context`
@@ -167,22 +192,65 @@ type route<'env>
 let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'env, 'p, 'b, 'r, 'e>) => route<'env>
 ```
 
-The handler receives decoded `params` and `body`, and returns `Ok(response)` or `Error(declaredError)`.
+The handler receives decoded `params` and `body`, and returns `Ok(response)` (sent as 200) or `Error(declaredError)`. Invalid input is a 400, and an exception is logged and answered with a 500 that reveals nothing. It never reaches Hono's `onError`. [Errors](errors.md#on-the-server) lists every case and the wire formats.
 
-| Situation | Response |
-| --- | --- |
-| Invalid path params (checked before the body is read) | 400 `invalid_params` |
-| Body isn't valid JSON | 400 `malformed_json` |
-| Body fails the codec | 400 `invalid_body` |
-| `Ok(response)` | 200 with the encoded response |
-| `Error(e)` | `errorStatus(e)` with `{"applicationError": ...}` |
-| Body can't be read (stream error, aborted request) | Logged, then 500 `internal` with no detail |
-| Exception from a codec or the handler | Logged, then 500 `internal` with no detail |
+## `@resapi/express` (namespace `ResApiExpress`)
 
-Framework errors have the body `{"error": {"kind", "message", "path"}}`.
+Express 5 only. See the [Express guide](express.md).
 
-- **Content type:** a typed POST accepts any content type, as long as the body is valid JSON. This is the same on Hono and Express.
-- **Exceptions:** resAPI handles exceptions from typed endpoints itself, so they never reach Hono's `onError` or Express's error middleware. Plain `Router.get`/`post` routes and middleware follow the framework's own error handling.
+### `Router`
+
+```rescript
+type t                                   // the Express app
+type handler = (Req.t, Res.t) => promise<unit>
+type next = unit => unit
+type middleware = (Req.t, Res.t, next) => unit
+type server
+
+let make: unit => t
+let get: (t, string, handler) => t
+let post: (t, string, handler) => t
+let use: (t, ~path: string=?, middleware) => t
+let register: (t, EndpointHandler.route) => t
+let listen: (t, int, unit => unit) => server  // port 0 picks a free port
+let close: server => unit
+```
+
+- **`use`:** takes native Express middleware, such as `@module("express") external json: unit => Router.middleware = "json"`. The first `use` is the outermost layer, and middleware also runs for unmatched routes.
+- **`register`:** mounts a typed endpoint. POST routes get a raw-text body parser (100kb limit), and a body already parsed upstream is used as is.
+- **Exceptions:** a rejected plain handler or a thrown middleware exception goes to Express's error handler, with ReScript exceptions rethrown as JS `Error`s.
+
+### `Req` and `Res`
+
+```rescript
+// Req: Express's request
+type t
+let params: t => dict<string>            // percent-decoded
+let body: t => Nullable.t<JSON.t>        // set by body-parsing middleware
+let header: (t, string) => option<string>
+let method: t => string
+let path: t => string
+
+// Res: Express's response
+type t
+let status: (t, int) => t
+let json: (t, JSON.t) => unit
+let send: (t, string) => unit
+let setHeader: (t, string, string) => t
+```
+
+### `EndpointHandler`
+
+```rescript
+type input<'params, 'body> = {params: 'params, body: 'body}
+type handler<'params, 'body, 'response, 'error> =
+  (Req.t, input<'params, 'body>) => promise<result<'response, 'error>>
+type route
+
+let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'p, 'b, 'r, 'e>) => route
+```
+
+Behaves as on Hono. Typed-endpoint exceptions never reach Express's error middleware.
 
 ## `@resapi/sury`
 

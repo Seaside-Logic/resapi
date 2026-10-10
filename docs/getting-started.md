@@ -4,8 +4,6 @@ This guide builds a small API with one typed endpoint, serves it from a Cloudfla
 
 The complete version is in [`examples/cloudflare`](../examples/cloudflare).
 
-> resAPI is not published to npm yet. The package names below are the ones it will use.
-
 ## 1. Install
 
 ```bash
@@ -27,6 +25,8 @@ npm install --save-dev rescript wrangler
 ```
 
 resAPI needs ReScript 12.3.1 or later. `sury-ppx` is optional: it generates the `*Schema` values from `@schema` types. Hand-written Sury schemas, or hand-written codecs, work the same way.
+
+npm may warn that `sury-ppx` has an install script not covered by `allowScripts`. The PPX works either way. To silence the warning, run `npm install-scripts approve sury-ppx`.
 
 ## 2. Define a contract
 
@@ -107,7 +107,7 @@ let app: Router.t<unit> =
 
 `Router.get`/`post` register plain routes: you get the context and return a Fetch `Response`. `Router.register` adds a typed endpoint. Its handler receives decoded `params` and `body`, and returns `Ok(response)` or `Error(declaredError)`.
 
-Before your handler runs, the adapter decodes path params, then parses and decodes the body. Invalid input gets a 400 with `{"error": {"kind", "message", "path"}}`. The kinds are `invalid_params`, `malformed_json` and `invalid_body`. An exception from your handler or a codec gets a 500 that reveals no detail, and the exception is logged.
+Before your handler runs, the adapter decodes path params, then parses and decodes the body. Invalid input gets a 400 with `{"error": {"kind", "message", "path"}}`. The kinds are `invalid_params`, `malformed_json` and `invalid_body`. An exception from your handler or a codec gets a 500 that reveals no detail, and the exception is logged. [Errors](errors.md) covers every case.
 
 ## 4. Run it as a Worker
 
@@ -138,8 +138,11 @@ Give the router your bindings type and read it with `Context.env`:
 ```rescript
 // src/Env.res
 type t = {@as("API_SECRET") apiSecret: string}
+```
 
-// in a handler on a Router.t<Env.t>
+In a handler on a `Router.t<Env.t>`:
+
+```rescript
 let secret = (ctx->Context.env).apiSecret
 ```
 
@@ -180,16 +183,29 @@ let describe = async id =>
   | Ok(account) => account.name
   | Error(Application({error: NotFound})) => "not found"
   | Error(Network(message)) => `network error: ${message}`
+  | Error(Aborted) => "cancelled"
   | Error(InvalidResponse({path, message})) => `bad response at ${path->Array.join(".")}: ${message}`
   | Error(UnexpectedStatus({status})) => `status ${status->Int.toString}`
   | Error(InvalidParams(message) | EncodeFailed(message)) => message
   }
 
-let create = (newAccount: AccountApi.newAccount) =>
-  client->Client.callWithBody(AccountApi.createAccount, ~params=(), ~body=newAccount)
+let create = (newAccount: AccountApi.newAccount, ~token) =>
+  client->Client.callWithBody(
+    AccountApi.createAccount,
+    ~params=(),
+    ~body=newAccount,
+    ~headers=dict{"authorization": `Bearer ${token}`},
+  )
+
+// Gives up after 5 seconds with Error(Aborted).
+let describeQuickly = id =>
+  client->Client.call(AccountApi.getAccount, ~params={id: id}, ~signal=Fetch.AbortSignal.timeout(5000))
 ```
 
 Use `Client.call` for contracts without a body and `Client.callWithBody` for POST. Passing the wrong params, a missing body or the wrong body type is a compile error.
+
+- **Headers:** `~headers` on a call, or `Client.make(~headers=...)` for every call. A per-call header overrides the client's, and both override resAPI's `content-type`. Names are case-insensitive.
+- **Cancellation:** `~signal` takes a Fetch `AbortSignal`, such as `Fetch.AbortSignal.timeout(ms)` or `Fetch.AbortController.signal(controller)`. An aborted call returns `Error(Aborted)`.
 
 The client module imports only the contract, so a bundle built from it contains no Hono code.
 

@@ -91,10 +91,7 @@ Any exception from a codec or handler is logged as the JS `Error` itself, so the
 - **Native handlers and middleware.** Plain routes take `(req, res) => promise<unit>`. Middleware is Express's `(req, res, next) => unit`, so `express.json()`, `express.static` and similar bind with a single external.
 - **Errors.** Express 5 passes a rejected handler promise to its error handler. As on Hono, `Router.get`/`post`/`use` rethrow raw ReScript exceptions as JS `Error`s, here so that Express's handler logs a stack instead of `[object Object]`. Express's default handler shows the stack in the response body unless `NODE_ENV=production`; that is Express's behaviour, and typed endpoints never reach it.
 - **Request bodies.** `Router.register` mounts POST endpoints behind `express.text({type: () => true})`, so `Dispatch` sees the raw body and reports `malformed_json` exactly as on Hono. If an upstream `express.json()` has already parsed the body, the parsed value is used.
-- **Body-parser failures are Express's.** Body parsers run before `Dispatch`, so their failures go to Express's error handler in Express's format, not resAPI's: a read error, a body over the size limit (413), an unsupported charset (415), or malformed JSON rejected by an upstream `express.json()` (400). `Dispatch` won't read the body once params fail, but an upstream parser may already have read it.
-- **Size limit.** The built-in parser keeps `express.text`'s default limit of 100kb. To change it, mount `express.text({limit: ...})` or `express.json({limit: ...})` ahead of the typed routes. resAPI uses a body that has already been parsed.
-- **Request-scoped values.** `Req.t` has no typed slot for middleware state. Bind a field yourself, for example `@set external setUser: (Req.t, string) => unit = "user"` along with a matching `@get`.
-- **Versions.** Express 5 only (tested on 5.2.1). Express 4 is not supported.
+Usage details (body parsers and size limits, content types, request-scoped values, supported versions) are in the [Express guide](express.md).
 
 ## Typed application errors
 
@@ -115,6 +112,7 @@ Error categories stay distinct on the client:
 | --- | --- |
 | `Application({status, error})` | A declared error, decoded and typed |
 | `Network(message)` | `fetch` itself failed |
+| `Aborted` | The call's `~signal` aborted or timed out |
 | `UnexpectedStatus({status, body})` | Non-2xx without a declared error: framework errors, proxies, 500s |
 | `InvalidResponse(Codec.error)` | The body broke the contract: bad JSON, a failed decode, or a malformed application error |
 | `InvalidParams(message)` | A path param is missing or not a scalar. Usually caught earlier by route checking |
@@ -127,6 +125,9 @@ Error categories stay distinct on the client:
 - **URLs.** `baseUrl` keeps its path prefix: `https://x.dev/api/` plus `/accounts/:id` gives `https://x.dev/api/accounts/123`. Param values are percent-encoded.
 - **Error handling.** Only `fetch` itself sits inside a `try`. Codec failures and statuses are classified separately, so a codec bug is never reported as a network error. An invalid `baseUrl` throws, because it is a configuration bug rather than a request outcome.
 - **Testing.** `~fetch` can be injected, so tests can run against a fake or call the router in-process.
+- **Request options.** Headers merge as client defaults, then `content-type`, then per-call headers, with names lowercased so a later value replaces an earlier one instead of Fetch joining them. Cancellation is the Fetch `AbortSignal`, not a resAPI mechanism. An abort is reported as `Aborted`, separately from `Network`, because the caller chose it.
+
+The full list of failures and their wire formats is in [Errors](errors.md).
 
 ## What was left out
 
