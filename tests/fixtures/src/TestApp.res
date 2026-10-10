@@ -44,3 +44,11 @@ let app: Router.t<unit> =
   ->Router.register(
     TestApi.brokenEncoder->EndpointHandler.make(async (_ctx, _) => Ok({id: "x", name: "x"})),
   )
+  ->Router.register(
+    TestApi.throwingBody->EndpointHandler.make(async (_ctx, _) => Ok({id: "x", name: "x"})),
+  )
+  ->Router.register(
+    TestApi.throwingErrorCodec->EndpointHandler.make(async (_ctx, _) => Error(NotFound)),
+  )
+  // The handler rejects with a raw ReScript exception, not a JS Error.
+  ->Router.register(TestApi.getMember->EndpointHandler.make(async (_ctx, _) => throw(Not_found)))

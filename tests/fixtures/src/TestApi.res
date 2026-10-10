@@ -137,3 +137,22 @@ let throwingParams = Endpoint.get(
   ~params=encodeOnly(_ => JsError.throwWithMessage("cannot encode")),
   ~response=accountCodec,
 )
+
+// Its body decoder throws, for the server's internal-error path.
+let throwingBody = Endpoint.post(
+  "/throwing-body",
+  ~params=Codec.unit,
+  ~body={...newAccountCodec, decode: _ => JsError.throwWithMessage("secret internal detail")},
+  ~response=accountCodec,
+)
+
+// Its application-error encoder throws, for the server's internal-error path.
+let throwingErrorCodec =
+  Endpoint.get(
+    "/throwing-error-codec",
+    ~params=Codec.unit,
+    ~response=accountCodec,
+  )->Endpoint.withErrors(
+    {...accountErrorCodec, encode: _ => JsError.throwWithMessage("secret internal detail")},
+    ~status=_ => 404,
+  )

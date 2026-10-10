@@ -113,3 +113,17 @@ test("an encoder exception is a 500 that hides the exception", async t => {
   assert.equal(console.error.mock.callCount(), 1);
   assert.doesNotMatch(JSON.stringify(error), /secret internal detail/);
 });
+
+for (const [name, path, init] of [
+  ["a body decoder exception", "/throwing-body", { method: "POST", body: JSON.stringify({ name: "Ann" }) }],
+  ["an application-error encoder exception", "/throwing-error-codec"],
+  ["a handler rejecting with a ReScript exception", "/orgs/acme/members/42"],
+]) {
+  test(`${name} is a logged 500 that hides the exception`, async t => {
+    t.mock.method(console, "error", () => {});
+    const error = await expectError(await request(path, init), 500, "internal");
+    assert.equal(error.message, "Internal Server Error");
+    assert.doesNotMatch(JSON.stringify(error), /secret internal detail|Not_found/);
+    assert.equal(console.error.mock.callCount(), 1);
+  });
+}
