@@ -24,16 +24,15 @@ type accountError = | @as("not_found") NotFound
 
 let accountCodec = SuryCodec.make(accountSchema)
 
-let getAccount =
-  Endpoint.get(
-    "/accounts/:id",
-    ~params=SuryCodec.make(paramsSchema),
-    ~response=accountCodec,
-  )->Endpoint.withErrors(SuryCodec.make(accountErrorSchema), ~status=error =>
-    switch error {
-    | NotFound => 404
-    }
-  )
+let getAccount = Endpoint.get(
+  "/accounts/:id",
+  ~params=SuryCodec.make(paramsSchema),
+  ~response=accountCodec,
+)->Endpoint.withErrors(SuryCodec.make(accountErrorSchema), ~status=error =>
+  switch error {
+  | NotFound => 404
+  }
+)
 
 let createAccount = Endpoint.post(
   "/accounts",

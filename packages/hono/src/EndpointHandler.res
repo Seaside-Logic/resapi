@@ -36,7 +36,9 @@ let errorResponse = (~status, ~kind, ~message, ~path=[]) =>
 let applicationErrorResponse = (contract: Endpoint.t<_, _, _, _>, error) => {
   let status = contract.errorStatus(error)
   if status < 400 || status > 599 {
-    JsError.throwWithMessage(`Application error status must be 4xx or 5xx, got ${status->Int.toString}`)
+    JsError.throwWithMessage(
+      `Application error status must be 4xx or 5xx, got ${status->Int.toString}`,
+    )
   }
   Fetch.Response.json(
     JSON.Encode.object(dict{"applicationError": contract.errorCodec.encode(error)}),

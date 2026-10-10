@@ -20,7 +20,7 @@ let app =
     ),
   )
   ->Router.register(
-    AccountApi.createAccount->EndpointHandler.make(async (_ctx, {body}) =>
-      Ok(AccountStore.create(body))
-    ),
+    AccountApi.createAccount->EndpointHandler.make(async (_ctx, {body}) => Ok(
+      AccountStore.create(body),
+    )),
   )

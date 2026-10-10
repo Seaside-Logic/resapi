@@ -15,7 +15,10 @@
     "format": "rescript format",
     "test": "rescript && node --test",
     "test:worker": "scripts/test-worker.sh",
-    "dev": "npm run build && npm run dev -w examples/cloudflare"
+    "dev": "npm run build && npm run dev -w examples/cloudflare",
+    "format:check": "rescript format --check",
+    "check:isolation": "node scripts/check-isolation.mjs",
+    "check:clean-build": "scripts/check-clean-build.sh"
   },
   "engines": {
     "node": ">=22"
