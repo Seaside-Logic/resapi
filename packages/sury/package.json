@@ -1,0 +1,15 @@
+{
+  "name": "@resapi/sury",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sury schema adapter for resAPI codecs.",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@resapi/core": "*",
+    "sury": "11.0.0"
+  },
+  "peerDependencies": {
+    "rescript": "^12.3.1"
+  }
+}

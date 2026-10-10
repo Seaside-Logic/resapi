@@ -2,7 +2,8 @@
   "name": "resapi",
   "sources": [],
   "dependencies": [
-    "@resapi/core"
+    "@resapi/core",
+    "@resapi/sury"
   ],
   "package-specs": {
     "module": "esmodule",

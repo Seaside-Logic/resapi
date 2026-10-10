@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@resapi/core": "*"
+    "@resapi/core": "*",
+    "@resapi/sury": "*",
+    "sury": "11.0.0"
   }
 }

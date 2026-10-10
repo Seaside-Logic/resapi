@@ -1,0 +1,7 @@
+{
+  "name": "@resapi/sury",
+  "sources": {"dir": "src"},
+  "dependencies": ["@resapi/core", "sury"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs"
+}
