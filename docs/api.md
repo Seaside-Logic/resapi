@@ -159,9 +159,13 @@ The handler receives decoded `params` and `body`, and returns `Ok(response)` or 
 | Body fails the codec | 400 `invalid_body` |
 | `Ok(response)` | 200 with the encoded response |
 | `Error(e)` | `errorStatus(e)` with `{"applicationError": ...}` |
-| Exception or encoder failure | Logged, then 500 `internal` with no detail |
+| Body can't be read (stream error, aborted request) | Logged, then 500 `internal` with no detail |
+| Exception from a codec or the handler | Logged, then 500 `internal` with no detail |
 
 Framework errors have the body `{"error": {"kind", "message", "path"}}`.
+
+- **Content type:** a typed POST accepts any content type, as long as the body is valid JSON. This is the same on Hono and Express.
+- **Exceptions:** resAPI handles exceptions from typed endpoints itself, so they never reach Hono's `onError` or Express's error middleware. Plain `Router.get`/`post` routes and middleware follow the framework's own error handling.
 
 ## `@resapi/sury`
 
