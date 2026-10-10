@@ -42,7 +42,9 @@ let readJsonBody = async (contract: Endpoint.t<_, _, _, _>, readBody) =>
     switch readBody() {
     | Parsed(json) => Ok(json)
     | Text(text) =>
-      try Ok(JSON.parseOrThrow(await text)) catch {
+      // Awaited outside the try: a failed read is unexpected (500), not malformed JSON.
+      let text = await text
+      try Ok(JSON.parseOrThrow(text)) catch {
       | JsExn(e) => Error(e->JsExn.message->Option.getOr("Invalid JSON"))
       }
     }

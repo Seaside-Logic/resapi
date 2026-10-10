@@ -87,6 +87,15 @@ test("invalid params are rejected before the body is read", async () => {
   assert.equal(pulled, false);
 });
 
+test("a body that fails to read is a 500 internal, not malformed_json", async t => {
+  t.mock.method(console, "error", () => {});
+  const body = new ReadableStream({ pull() { throw new Error("secret stream failure"); } }, { highWaterMark: 0 });
+  const res = await request("/accounts", { method: "POST", body, duplex: "half" });
+  const error = await expectError(res, 500, "internal");
+  assert.doesNotMatch(JSON.stringify(error), /secret stream failure/);
+  assert.equal(console.error.mock.callCount(), 1);
+});
+
 test("malformed JSON and an empty body are malformed_json", async () => {
   await expectError(await post("/accounts", "{not json"), 400, "malformed_json");
   await expectError(await post("/accounts", ""), 400, "malformed_json");
