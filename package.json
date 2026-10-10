@@ -1,0 +1,17 @@
+{
+  "name": "resapi",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "examples/*"],
+  "scripts": {
+    "build": "rescript",
+    "watch": "rescript watch",
+    "clean": "rescript clean",
+    "format": "rescript format",
+    "test": "rescript && node --test"
+  },
+  "engines": {"node": ">=22"},
+  "devDependencies": {
+    "rescript": "12.3.1"
+  }
+}

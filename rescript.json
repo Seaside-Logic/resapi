@@ -1,0 +1,7 @@
+{
+  "name": "resapi",
+  "sources": [],
+  "dependencies": [],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs"
+}

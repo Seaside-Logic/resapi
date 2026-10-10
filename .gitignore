@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# ReScript build output (compiled in-source to *.res.mjs)
+lib/
+*.res.mjs
+.bsb.lock
+
+# Wrangler local state and build output
+.wrangler/
+dist/
+
+# Secrets
+.env
+.env.*
+.dev.vars
+
+# Coverage and temporary files
+coverage/
+*.log
+*.tmp
+.DS_Store
