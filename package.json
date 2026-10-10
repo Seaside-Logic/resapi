@@ -13,7 +13,9 @@
     "watch": "rescript watch",
     "clean": "rescript clean",
     "format": "rescript format",
-    "test": "rescript && node --test"
+    "test": "rescript && node --test",
+    "test:worker": "scripts/test-worker.sh",
+    "dev": "npm run build && npm run dev -w examples/cloudflare"
   },
   "engines": {
     "node": ">=22"

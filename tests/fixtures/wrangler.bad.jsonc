@@ -1,0 +1,1 @@
+{ "name": "resapi-bad", "main": "src/BadWorker.res.mjs", "compatibility_date": "2026-10-01" }

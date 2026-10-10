@@ -1,0 +1,20 @@
+{
+  "name": "@resapi/example-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check:deploy": "wrangler deploy --dry-run --outdir dist"
+  },
+  "dependencies": {
+    "@resapi/core": "*",
+    "@resapi/hono": "*",
+    "@resapi/sury": "*",
+    "hono": "4.13.13",
+    "sury": "11.0.0",
+    "sury-ppx": "11.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.149.0"
+  }
+}

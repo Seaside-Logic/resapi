@@ -1,0 +1,1 @@
+{ "name": "resapi-probe", "main": "src/ProbeWorker.res.mjs", "compatibility_date": "2026-10-01" }

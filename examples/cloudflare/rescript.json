@@ -1,0 +1,8 @@
+{
+  "name": "@resapi/example-cloudflare",
+  "sources": {"dir": "src", "subdirs": true},
+  "dependencies": ["@resapi/core", "@resapi/hono", "@resapi/sury", "sury"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs",
+  "ppx-flags": ["sury-ppx/bin"]
+}

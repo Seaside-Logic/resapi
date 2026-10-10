@@ -5,7 +5,9 @@
   },
   "dependencies": [
     "@resapi/core",
-    "@resapi/hono"
+    "@resapi/hono",
+    "@resapi/sury",
+    "sury"
   ],
   "package-specs": {
     "module": "esmodule",

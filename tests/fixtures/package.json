@@ -5,6 +5,8 @@
   "dependencies": {
     "@resapi/core": "*",
     "@resapi/hono": "*",
-    "hono": "4.13.13"
+    "hono": "4.13.13",
+    "@resapi/sury": "*",
+    "sury": "11.0.0"
   }
 }

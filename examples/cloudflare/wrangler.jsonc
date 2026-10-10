@@ -1,0 +1,7 @@
+{
+  "name": "resapi-example",
+  "main": "src/Worker.res.mjs",
+  "compatibility_date": "2026-10-01"
+  // API_SECRET is a secret: `wrangler secret put API_SECRET` for deploys, `.dev.vars` locally
+  // (see .dev.vars.example).
+}

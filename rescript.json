@@ -5,7 +5,8 @@
     "@resapi/core",
     "@resapi/hono",
     "@resapi/sury",
-    "@resapi/test-fixtures"
+    "@resapi/test-fixtures",
+    "@resapi/example-cloudflare"
   ],
   "package-specs": {
     "module": "esmodule",
