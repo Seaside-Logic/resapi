@@ -1,7 +1,6 @@
 {
   "name": "@resapi/hono",
   "version": "0.1.0",
-  "private": true,
   "description": "Hono server adapter for resAPI contracts.",
   "license": "MIT",
   "homepage": "https://resapi.dev",

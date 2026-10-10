@@ -1,7 +1,6 @@
 {
   "name": "@resapi/core",
   "version": "0.1.0",
-  "private": true,
   "description": "Type-safe HTTP contracts for ReScript: endpoint contracts, codecs and a typed client.",
   "license": "MIT",
   "homepage": "https://resapi.dev",
