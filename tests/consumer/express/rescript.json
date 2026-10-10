@@ -1,0 +1,8 @@
+{
+  "name": "consumer",
+  "sources": {"dir": "src"},
+  "dependencies": ["@resapi/core", "@resapi/sury", "sury", "@resapi/express"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs",
+  "ppx-flags": ["sury-ppx/bin"]
+}

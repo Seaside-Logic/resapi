@@ -19,7 +19,8 @@
     "format:check": "rescript format --check",
     "check:isolation": "node scripts/check-isolation.mjs",
     "check:clean-build": "scripts/check-clean-build.sh",
-    "dev:express": "npm run build && npm start -w examples/express"
+    "dev:express": "npm run build && npm start -w examples/express",
+    "check:packages": "scripts/check-packages.sh"
   },
   "engines": {
     "node": ">=22"
