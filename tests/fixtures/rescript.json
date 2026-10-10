@@ -1,7 +1,15 @@
 {
   "name": "@resapi/test-fixtures",
-  "sources": {"dir": "src"},
-  "dependencies": ["@resapi/core"],
-  "package-specs": {"module": "esmodule", "in-source": true},
+  "sources": {
+    "dir": "src"
+  },
+  "dependencies": [
+    "@resapi/core",
+    "@resapi/hono"
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
   "suffix": ".res.mjs"
 }

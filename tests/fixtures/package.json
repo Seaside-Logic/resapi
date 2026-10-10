@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@resapi/core": "*"
+    "@resapi/core": "*",
+    "@resapi/hono": "*",
+    "hono": "4.13.13"
   }
 }

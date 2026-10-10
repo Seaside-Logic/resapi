@@ -1,0 +1,15 @@
+{
+  "name": "@resapi/hono",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Hono server adapter for resAPI contracts.",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@resapi/core": "*",
+    "hono": "4.13.13"
+  },
+  "peerDependencies": {
+    "rescript": "^12.3.1"
+  }
+}

@@ -35,9 +35,17 @@ let newAccountCodec: Codec.t<newAccount> = {
   encode: a => JSON.Object(dict{"name": JSON.String(a.name)}),
 }
 
-// Encode-only: the client never decodes params.
+// Route params arrive as strings; `member` must parse as an int.
 let memberParamsCodec: Codec.t<memberParams> = {
-  decode: _ => Error({path: [], message: "not used"}),
+  decode: json =>
+    switch (field(json, "org"), field(json, "member")) {
+    | (Ok(org), Ok(member)) =>
+      switch Int.fromString(member) {
+      | Some(member) => Ok({org, member})
+      | None => Error({path: ["member"], message: "Expected integer"})
+      }
+    | (Error(e), _) | (_, Error(e)) => Error(e)
+    },
   encode: p =>
     JSON.Object(dict{"org": JSON.String(p.org), "member": JSON.Number(p.member->Int.toFloat)}),
 }
@@ -55,6 +63,20 @@ let getMember = Endpoint.get(
   "/orgs/:org/members/:member",
   ~params=memberParamsCodec,
   ~response=accountCodec,
+)
+
+let addMember = Endpoint.post(
+  "/orgs/:org/members/:member",
+  ~params=memberParamsCodec,
+  ~body=newAccountCodec,
+  ~response=accountCodec,
+)
+
+// Its response encoder throws, for the server's internal-error path.
+let brokenEncoder = Endpoint.get(
+  "/broken",
+  ~params=Codec.unit,
+  ~response={...accountCodec, encode: _ => JsError.throwWithMessage("secret internal detail")},
 )
 
 // Broken params codecs, for the client's error classification.

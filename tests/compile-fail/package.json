@@ -6,6 +6,7 @@
     "@resapi/core": "*",
     "@resapi/sury": "*",
     "sury": "11.0.0",
-    "@resapi/test-fixtures": "*"
+    "@resapi/test-fixtures": "*",
+    "@resapi/hono": "*"
   }
 }

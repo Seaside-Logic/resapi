@@ -3,6 +3,7 @@
   "sources": [],
   "dependencies": [
     "@resapi/core",
+    "@resapi/hono",
     "@resapi/sury",
     "@resapi/test-fixtures"
   ],

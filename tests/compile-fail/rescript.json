@@ -7,7 +7,8 @@
     "@resapi/core",
     "@resapi/sury",
     "sury",
-    "@resapi/test-fixtures"
+    "@resapi/test-fixtures",
+    "@resapi/hono"
   ],
   "package-specs": {
     "module": "esmodule",
