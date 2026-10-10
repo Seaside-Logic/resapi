@@ -101,6 +101,17 @@ test("malformed JSON and an empty body are malformed_json", async () => {
   await expectError(await post("/accounts", ""), 400, "malformed_json");
 });
 
+test("a valid JSON body is accepted under any content type", async () => {
+  const body = JSON.stringify({ name: "Ann" });
+  for (const contentType of ["application/json", "application/json; charset=utf-8", "text/plain", "application/octet-stream"]) {
+    const res = await request("/accounts", { method: "POST", headers: { "content-type": contentType }, body });
+    assert.equal(res.status, 200, contentType);
+  }
+  assert.equal((await request("/accounts", { method: "POST", body: new TextEncoder().encode(body) })).status, 200);
+  const binary = { method: "POST", headers: { "content-type": "application/octet-stream" }, body: new Uint8Array([0xff, 0xfe, 0x00]) };
+  await expectError(await request("/accounts", binary), 400, "malformed_json");
+});
+
 test("a body that fails the codec is invalid_body with its path", async () => {
   await expectError(await post("/accounts", JSON.stringify({ name: 1 })), 400, "invalid_body", ["name"]);
 });
