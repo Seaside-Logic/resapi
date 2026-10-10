@@ -2,7 +2,8 @@
 // from this directory (see README.md). Not part of the npm workspace.
 {
   "name": "resapi-site",
+  "account_id": "b0dfd5fd415a9ede6dafad306a7d1ffc",
   "compatibility_date": "2026-10-01",
   "assets": {"directory": "./public"},
-  "routes": [{"pattern": "resapi.dev", "custom_domain": true}]
+  "routes": [{"pattern": "resapi.dev", "zone_name": "resapi.dev", "custom_domain": true}]
 }
