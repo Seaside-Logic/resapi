@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/Server.res.mjs"
+    "start": "node --env-file=.env src/Server.res.mjs"
   },
   "dependencies": {
     "@resapi/core": "*",

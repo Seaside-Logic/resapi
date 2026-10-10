@@ -13,6 +13,7 @@ dist/
 # Secrets
 .env
 .env.*
+!.env.example
 .dev.vars
 
 # Coverage and temporary files
