@@ -79,8 +79,13 @@ let brokenEncoder = Endpoint.get(
   ~response={...accountCodec, encode: _ => JsError.throwWithMessage("secret internal detail")},
 )
 
-// Broken params codecs, for the client's error classification.
-let encodeOnly = (encode): Codec.t<string> => {decode: _ => Error({path: [], message: "not used"}), encode}
+// Broken params codecs, for the client's error classification. Their decoder rejects the probe value at
+// `id` as a refined codec would, so RouteCheck can't validate them (CannotValidate) and the client's
+// own checks are the only guard.
+let encodeOnly = (encode): Codec.t<string> => {
+  decode: _ => Error({path: ["id"], message: "Expected a real id"}),
+  encode,
+}
 
 let missingParam = Endpoint.get(
   "/accounts/:id",

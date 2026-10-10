@@ -1,5 +1,6 @@
 // A contract describes an endpoint's wire format and is safe to share with clients:
 // it references no server or runtime code. Server adapters turn contracts into routes.
+// Constructors check the route's params against the params codec and throw on a mismatch (RouteCheck).
 
 type method = Get | Post
 
@@ -12,17 +13,23 @@ type t<'params, 'body, 'response> = {
 }
 
 let get = (path, ~params, ~response) => {
-  method: Get,
-  path,
-  paramsCodec: params,
-  bodyCodec: Codec.unit,
-  responseCodec: response,
+  RouteCheck.assertValid(path, params)
+  {
+    method: Get,
+    path,
+    paramsCodec: params,
+    bodyCodec: Codec.unit,
+    responseCodec: response,
+  }
 }
 
 let post = (path, ~params, ~body, ~response) => {
-  method: Post,
-  path,
-  paramsCodec: params,
-  bodyCodec: body,
-  responseCodec: response,
+  RouteCheck.assertValid(path, params)
+  {
+    method: Post,
+    path,
+    paramsCodec: params,
+    bodyCodec: body,
+    responseCodec: response,
+  }
 }
