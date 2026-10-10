@@ -116,7 +116,11 @@ test("an aborted signal is Aborted, not Network", async () => {
 
 test("a signal's timeout is Aborted", async () => {
   const { client } = recording("https://x.dev", hang);
+  // AbortSignal.timeout's timer doesn't keep Node alive, and the fake server holds no socket open. On
+  // Node 22 the event loop would drain and cancel the test, so keep a timer running until it settles.
+  const keepAlive = setTimeout(() => {}, 1000);
   const result = await Client.call(client, TestApi.getAccount, { id: "a1" }, undefined, AbortSignal.timeout(5));
+  clearTimeout(keepAlive);
   assert.deepEqual(result, { TAG: "Error", _0: "Aborted" });
 });
 
