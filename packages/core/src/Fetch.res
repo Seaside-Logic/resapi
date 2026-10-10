@@ -1,8 +1,23 @@
 // Fetch API bindings shared by the client and server adapters.
 
+module AbortSignal = {
+  type t
+
+  /** A signal that aborts after the given number of milliseconds. */
+  @scope("AbortSignal") @val external timeout: int => t = "timeout"
+}
+
+module AbortController = {
+  type t
+
+  @new external make: unit => t = "AbortController"
+  @get external signal: t => AbortSignal.t = "signal"
+  @send external abort: t => unit = "abort"
+}
+
 module Request = {
   type t
-  type init = {method?: string, headers?: dict<string>, body?: string}
+  type init = {method?: string, headers?: dict<string>, body?: string, signal?: AbortSignal.t}
 
   @new external make: (string, ~init: init=?) => t = "Request"
 }

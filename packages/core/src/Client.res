@@ -1,10 +1,15 @@
 // Calls an endpoint contract over HTTP. Depends only on contracts and Fetch, never on a server adapter.
 
-type t = {baseUrl: string, fetch: Fetch.Request.t => promise<Fetch.Response.t>}
+type t = {
+  baseUrl: string,
+  fetch: Fetch.Request.t => promise<Fetch.Response.t>,
+  headers: dict<string>,
+}
 
 type error<'e> =
   | Application({status: int, error: 'e})
   | Network(string)
+  | Aborted
   | UnexpectedStatus({status: int, body: string})
   | InvalidResponse(Codec.error)
   | InvalidParams(string)
@@ -13,7 +18,7 @@ type error<'e> =
 @val external globalFetch: Fetch.Request.t => promise<Fetch.Response.t> = "fetch"
 @val external encodeURIComponent: string => string = "encodeURIComponent"
 
-let make = (~baseUrl, ~fetch=globalFetch) => {baseUrl, fetch}
+let make = (~baseUrl, ~fetch=globalFetch, ~headers=dict{}) => {baseUrl, fetch, headers}
 
 /** Appends the path to the base URL, keeping any path prefix in the base: `https://x.dev/api/` + `/a` is `https://x.dev/api/a`. */
 let joinUrl = (baseUrl, path) => {
@@ -88,25 +93,52 @@ let fetchText = async (client, request) =>
     let response = await client.fetch(request)
     Ok((response, await response->Fetch.Response.readText))
   } catch {
-  | JsExn(e) => Error(Network(e->JsExn.message->Option.getOr("fetch failed")))
+  | JsExn(e) =>
+    switch e->JsExn.name {
+    | Some("AbortError" | "TimeoutError") => Error(Aborted)
+    | _ => Error(Network(e->JsExn.message->Option.getOr("fetch failed")))
+    }
   }
 
-let requestInit = (contract: Endpoint.t<_, _, _, _>, body): result<Fetch.Request.init, _> =>
+// Later sources win. Names are lowercased, because Fetch would otherwise combine `Authorization` and
+// `authorization` into one comma-separated value instead of overriding.
+let mergeHeaders = sources => {
+  let merged = dict{}
+  sources->Array.forEach(source =>
+    source->Dict.forEachWithKey((value, name) => merged->Dict.set(name->String.toLowerCase, value))
+  )
+  merged
+}
+
+let requestInit = (client, contract: Endpoint.t<_, _, _, _>, body, ~headers, ~signal): result<
+  Fetch.Request.init,
+  _,
+> =>
   switch contract.method {
-  | Get => Ok({method: "GET"})
+  | Get => Ok({method: "GET", headers: mergeHeaders([client.headers, headers]), ?signal})
   | Post =>
     encodeWith(contract.bodyCodec.encode, body)->Result.map((json): Fetch.Request.init => {
       method: "POST",
-      headers: dict{"content-type": "application/json"},
+      headers: mergeHeaders([client.headers, dict{"content-type": "application/json"}, headers]),
       body: json->JSON.stringify,
+      ?signal,
     })
   }
 
-let send = async (client, contract: Endpoint.t<_, _, _, _>, ~params, ~body) => {
+let send = async (
+  client,
+  contract: Endpoint.t<_, _, _, _>,
+  ~params,
+  ~body,
+  ~headers=dict{},
+  ~signal=?,
+) => {
   let prepared =
     encodeWith(contract.paramsCodec.encode, params)
     ->Result.flatMap(json => buildPath(contract.path, json))
-    ->Result.flatMap(path => requestInit(contract, body)->Result.map(init => (path, init)))
+    ->Result.flatMap(path =>
+      requestInit(client, contract, body, ~headers, ~signal)->Result.map(init => (path, init))
+    )
   switch prepared {
   | Error(e) => Error(e)
   | Ok((path, init)) =>
@@ -121,6 +153,7 @@ let send = async (client, contract: Endpoint.t<_, _, _, _>, ~params, ~body) => {
   }
 }
 
-let call = (client, contract, ~params) => send(client, contract, ~params, ~body=())
+let call = (client, contract, ~params, ~headers=?, ~signal=?) =>
+  send(client, contract, ~params, ~body=(), ~headers?, ~signal?)
 
 let callWithBody = send

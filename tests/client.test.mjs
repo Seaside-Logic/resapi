@@ -82,6 +82,44 @@ test("a fetch failure is Network", async () => {
   });
 });
 
+test("client headers, resAPI's content-type and per-request headers merge, later ones winning", async () => {
+  const requests = [];
+  const client = Client.make("https://x.dev", async request => {
+    requests.push(request);
+    return Response.json({ id: "new", name: "Ann" });
+  }, { Authorization: "Bearer default", "X-App": "demo", "Content-Type": "text/plain" });
+  await Client.callWithBody(client, TestApi.createAccount, undefined, { name: "Ann" }, { authorization: "Bearer token" });
+  const { headers } = requests[0];
+  assert.equal(headers.get("authorization"), "Bearer token");
+  assert.equal(headers.get("x-app"), "demo");
+  assert.equal(headers.get("content-type"), "application/json");
+  await Client.call(client, TestApi.getAccount, { id: "a1" }, { "X-Request-ID": "r1" });
+  assert.equal(requests[1].headers.get("x-request-id"), "r1");
+  assert.equal(requests[1].headers.get("authorization"), "Bearer default");
+});
+
+// A fake server that never answers, but rejects as fetch does when the request's signal aborts.
+const hang = request =>
+  new Promise((_, reject) => {
+    const { signal } = request;
+    if (signal.aborted) reject(signal.reason);
+    signal.addEventListener("abort", () => reject(signal.reason));
+  });
+
+test("an aborted signal is Aborted, not Network", async () => {
+  const { client } = recording("https://x.dev", hang);
+  const controller = new AbortController();
+  const pending = Client.call(client, TestApi.getAccount, { id: "a1" }, undefined, controller.signal);
+  controller.abort();
+  assert.deepEqual(await pending, { TAG: "Error", _0: "Aborted" });
+});
+
+test("a signal's timeout is Aborted", async () => {
+  const { client } = recording("https://x.dev", hang);
+  const result = await Client.call(client, TestApi.getAccount, { id: "a1" }, undefined, AbortSignal.timeout(5));
+  assert.deepEqual(result, { TAG: "Error", _0: "Aborted" });
+});
+
 test("a non-2xx status is UnexpectedStatus with the body text", async () => {
   const { client } = recording("https://x.dev", () => new Response("nope", { status: 503 }));
   assert.deepEqual(await Client.call(client, TestApi.getAccount, { id: "a1" }), {

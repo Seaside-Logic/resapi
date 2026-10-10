@@ -12,6 +12,7 @@ let describe = async (client, id) =>
   | Ok(account) => `${account.name}: ${account.balance->Float.toString}`
   | Error(Application({error: NotFound})) => "not found"
   | Error(Network(message)) => `network error: ${message}`
+  | Error(Aborted) => "cancelled"
   | Error(InvalidResponse({path, message})) =>
     `invalid response at [${path->Array.join(".")}]: ${message}`
   | Error(UnexpectedStatus({status})) => `unexpected status ${status->Int.toString}`
