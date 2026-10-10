@@ -20,7 +20,8 @@
     "check:isolation": "node scripts/check-isolation.mjs",
     "check:clean-build": "scripts/check-clean-build.sh",
     "dev:express": "npm run build && npm start -w examples/express",
-    "check:packages": "scripts/check-packages.sh"
+    "check:packages": "scripts/check-packages.sh",
+    "release:check": "npm run format:check && npm test && npm run check:isolation && npm run test:worker && npm run check:packages"
   },
   "engines": {
     "node": ">=22"
