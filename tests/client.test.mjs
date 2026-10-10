@@ -107,3 +107,33 @@ test("a non-JSON success response is InvalidResponse", async () => {
 test("an invalid base URL throws instead of posing as a request failure", async () => {
   await assert.rejects(Client.call(recording("not a url").client, TestApi.getAccount, { id: "a1" }), TypeError);
 });
+
+test("a declared application error decodes to Application with its status", async () => {
+  const { client } = recording("https://x.dev", () => Response.json({ applicationError: "access_denied" }, { status: 403 }));
+  assert.deepEqual(await Client.call(client, TestApi.getAccount, { id: "a1" }), {
+    TAG: "Error",
+    _0: { TAG: "Application", status: 403, error: "AccessDenied" },
+  });
+});
+
+test("a malformed application error is InvalidResponse, with the path under applicationError", async () => {
+  const { client } = recording("https://x.dev", () => Response.json({ applicationError: "on_fire" }, { status: 404 }));
+  const result = await Client.call(client, TestApi.getAccount, { id: "a1" });
+  assert.equal(result._0.TAG, "InvalidResponse");
+  assert.deepEqual(result._0._0.path, ["applicationError"]);
+});
+
+test("an application error from an endpoint that declares none is InvalidResponse", async () => {
+  const { client } = recording("https://x.dev", () => Response.json({ applicationError: "not_found" }, { status: 404 }));
+  const result = await Client.callWithBody(client, TestApi.createAccount, undefined, { name: "Ann" });
+  assert.equal(result._0.TAG, "InvalidResponse");
+});
+
+test("a framework error body is UnexpectedStatus, not an application error", async () => {
+  const body = JSON.stringify({ error: { kind: "invalid_params", message: "x", path: [] } });
+  const { client } = recording("https://x.dev", () => new Response(body, { status: 400 }));
+  assert.deepEqual(await Client.call(client, TestApi.getAccount, { id: "a1" }), {
+    TAG: "Error",
+    _0: { TAG: "UnexpectedStatus", status: 400, body },
+  });
+});

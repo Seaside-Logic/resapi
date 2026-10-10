@@ -2,7 +2,8 @@
 
 type t = {baseUrl: string, fetch: Fetch.Request.t => promise<Fetch.Response.t>}
 
-type error =
+type error<'e> =
+  | Application({status: int, error: 'e})
   | Network(string)
   | UnexpectedStatus({status: int, body: string})
   | InvalidResponse(Codec.error)
@@ -41,10 +42,9 @@ let buildPath = (path, params: JSON.t) => {
   ->Array.reduce(Ok([]), (acc, segment) =>
     acc->Result.flatMap(segments =>
       segment->String.startsWith(":")
-        ? paramValue(values, segment->String.slice(~start=1))->Result.map(value => [
-            ...segments,
-            encodeURIComponent(value),
-          ])
+        ? paramValue(values, segment->String.slice(~start=1))->Result.map(
+            value => [...segments, encodeURIComponent(value)],
+          )
         : Ok([...segments, segment])
     )
   )
@@ -57,11 +57,30 @@ let encodeWith = (encode, value) =>
   | _ => Error(EncodeFailed("Encoding failed"))
   }
 
-let decodeResponse = (contract: Endpoint.t<_, _, _>, text) =>
-  switch JSON.parseOrThrow(text) {
-  | exception JsExn(e) =>
-    Error(InvalidResponse({path: [], message: e->JsExn.message->Option.getOr("Invalid JSON")}))
-  | json => contract.responseCodec.decode(json)->Result.mapError(e => InvalidResponse(e))
+let parseJson = text =>
+  try Ok(JSON.parseOrThrow(text)) catch {
+  | JsExn(e) => Error({Codec.path: [], message: e->JsExn.message->Option.getOr("Invalid JSON")})
+  }
+
+let decodeResponse = (contract: Endpoint.t<_, _, _, _>, text) =>
+  parseJson(text)
+  ->Result.flatMap(contract.responseCodec.decode)
+  ->Result.mapError(e => InvalidResponse(e))
+
+// A non-2xx body of `{"applicationError": ...}` is a declared error and must decode as one; anything
+// else (framework errors, proxies, plain text) is just an unexpected status.
+let decodeFailure = (contract: Endpoint.t<_, _, _, _>, status, text) =>
+  switch parseJson(text) {
+  | Ok(Object(body)) =>
+    switch body->Dict.get("applicationError") {
+    | Some(json) =>
+      switch contract.errorCodec.decode(json) {
+      | Ok(error) => Error(Application({status, error}))
+      | Error(e) => Error(InvalidResponse({...e, path: ["applicationError", ...e.path]}))
+      }
+    | None => Error(UnexpectedStatus({status, body: text}))
+    }
+  | _ => Error(UnexpectedStatus({status, body: text}))
   }
 
 // Only the transport is inside the try: codec and status errors are classified elsewhere.
@@ -73,7 +92,7 @@ let fetchText = async (client, request) =>
   | JsExn(e) => Error(Network(e->JsExn.message->Option.getOr("fetch failed")))
   }
 
-let requestInit = (contract: Endpoint.t<_, _, _>, body): result<Fetch.Request.init, _> =>
+let requestInit = (contract: Endpoint.t<_, _, _, _>, body): result<Fetch.Request.init, _> =>
   switch contract.method {
   | Get => Ok({method: "GET"})
   | Post =>
@@ -84,7 +103,7 @@ let requestInit = (contract: Endpoint.t<_, _, _>, body): result<Fetch.Request.in
     })
   }
 
-let send = async (client, contract: Endpoint.t<_, _, _>, ~params, ~body) => {
+let send = async (client, contract: Endpoint.t<_, _, _, _>, ~params, ~body) => {
   let prepared =
     encodeWith(contract.paramsCodec.encode, params)
     ->Result.flatMap(json => buildPath(contract.path, json))
@@ -98,7 +117,7 @@ let send = async (client, contract: Endpoint.t<_, _, _>, ~params, ~body) => {
     | Ok((response, text)) =>
       response->Fetch.Response.ok
         ? decodeResponse(contract, text)
-        : Error(UnexpectedStatus({status: response->Fetch.Response.status, body: text}))
+        : decodeFailure(contract, response->Fetch.Response.status, text)
     }
   }
 }

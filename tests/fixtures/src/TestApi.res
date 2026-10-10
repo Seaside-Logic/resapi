@@ -5,6 +5,7 @@ type params = {id: string}
 type account = {id: string, name: string}
 type newAccount = {name: string}
 type memberParams = {org: string, member: int}
+type accountError = NotFound | AccessDenied
 
 let field = (json: JSON.t, key): result<string, Codec.error> =>
   switch json {
@@ -46,11 +47,43 @@ let memberParamsCodec: Codec.t<memberParams> = {
       }
     | (Error(e), _) | (_, Error(e)) => Error(e)
     },
-  encode: p =>
-    JSON.Object(dict{"org": JSON.String(p.org), "member": JSON.Number(p.member->Int.toFloat)}),
+  encode: p => JSON.Object(
+    dict{"org": JSON.String(p.org), "member": JSON.Number(p.member->Int.toFloat)},
+  ),
 }
 
-let getAccount = Endpoint.get("/accounts/:id", ~params=paramsCodec, ~response=accountCodec)
+let accountErrorCodec: Codec.t<accountError> = {
+  decode: json =>
+    switch json {
+    | String("not_found") => Ok(NotFound)
+    | String("access_denied") => Ok(AccessDenied)
+    | _ => Error({path: [], message: "Expected an account error"})
+    },
+  encode: error =>
+    switch error {
+    | NotFound => JSON.String("not_found")
+    | AccessDenied => JSON.String("access_denied")
+    },
+}
+
+let getAccount = Endpoint.get(
+  "/accounts/:id",
+  ~params=paramsCodec,
+  ~response=accountCodec,
+)->Endpoint.withErrors(accountErrorCodec, ~status=error =>
+  switch error {
+  | NotFound => 404
+  | AccessDenied => 403
+  }
+)
+
+// Declares a 200 for its error: the server must refuse to send that as an application error.
+let badErrorStatus =
+  Endpoint.get(
+    "/bad-error-status",
+    ~params=Codec.unit,
+    ~response=accountCodec,
+  )->Endpoint.withErrors(accountErrorCodec, ~status=_ => 200)
 
 let createAccount = Endpoint.post(
   "/accounts",

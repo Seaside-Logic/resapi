@@ -10,5 +10,16 @@ let app: Router.t<unit> =
   Router.make()
   ->Router.get("/health", async _ctx => Fetch.Response.text("ok"))
   ->Router.register(
-    TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) => Ok({id: params.id, name: "n"})),
+    TestApi.createAccount->EndpointHandler.make(async (_ctx, {body}) => Ok({id: "new", name: body.name})),
   )
+let describe = async client =>
+  switch await client->Client.call(TestApi.getAccount, ~params={id: "a1"}) {
+  | Ok(account) => account.name
+  | Error(Application({error: NotFound})) => "not found"
+  | Error(Application({error: AccessDenied, status})) => `denied (${status->Int.toString})`
+  | Error(Network(_) | UnexpectedStatus(_) | InvalidResponse(_) | InvalidParams(_) | EncodeFailed(_)) =>
+    "failed"
+  }
+let typedErrorRoute: EndpointHandler.route<unit> = TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
+  params.id == "a1" ? Ok({id: "a1", name: "n"}) : Error(NotFound)
+)

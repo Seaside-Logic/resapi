@@ -48,8 +48,24 @@ test("typed GET encodes the handler's response", async () => {
 });
 
 test("typed endpoint receives percent-decoded params", async () => {
-  const error = await expectError(await request("/accounts/a%2Fb%20c"), 404, "application");
-  assert.equal(error.message, "No account a/b c");
+  assert.deepEqual(await (await request("/accounts/a%2Fb%20c")).json(), { id: "a/b c", name: "Slashed" });
+});
+
+test("a declared application error is sent with its status and encoded value", async () => {
+  const notFound = await request("/accounts/missing");
+  assert.equal(notFound.status, 404);
+  assert.deepEqual(await notFound.json(), { applicationError: "not_found" });
+  const denied = await request("/accounts/secret");
+  assert.equal(denied.status, 403);
+  assert.deepEqual(await denied.json(), { applicationError: "access_denied" });
+});
+
+test("an application error mapped to a non-error status is an internal error", async t => {
+  t.mock.method(console, "error", () => {});
+  await expectError(await request("/bad-error-status"), 500, "internal");
+  const logged = console.error.mock.calls[0].arguments[0];
+  assert.ok(logged instanceof Error, "logs the JS Error itself, with its stack");
+  assert.match(logged.message, /must be 4xx or 5xx, got 200/);
 });
 
 test("typed POST decodes params and body", async () => {
