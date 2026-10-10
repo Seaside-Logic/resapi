@@ -6,11 +6,11 @@
   "license": "MIT",
   "homepage": "https://resapi.dev",
   "bugs": {
-    "url": "https://github.com/seasidelogic/resapi/issues"
+    "url": "https://github.com/Seaside-Logic/resapi/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/seasidelogic/resapi.git",
+    "url": "git+https://github.com/Seaside-Logic/resapi.git",
     "directory": "packages/express"
   },
   "keywords": [
