@@ -3,11 +3,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const dir = new URL("./compile-fail/", import.meta.url).pathname;
 const caseFile = join(dir, "src/Case.res");
+// src/ holds only the generated case, so it isn't in git: create it.
+mkdirSync(join(dir, "src"), { recursive: true });
 const rescript = new URL("../node_modules/.bin/rescript", import.meta.url).pathname;
 
 const compile = () => {
