@@ -4,7 +4,27 @@
   "private": true,
   "description": "Sury schema adapter for resAPI codecs.",
   "license": "MIT",
+  "homepage": "https://resapi.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasidelogic/resapi.git",
+    "directory": "packages/sury"
+  },
+  "keywords": [
+    "rescript",
+    "http",
+    "api",
+    "contract",
+    "typed-client",
+    "sury",
+    "schema"
+  ],
   "type": "module",
+  "files": [
+    "src/*.res",
+    "src/*.resi",
+    "rescript.json"
+  ],
   "dependencies": {
     "@resapi/core": "*",
     "sury": "11.0.0"

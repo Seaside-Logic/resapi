@@ -4,7 +4,25 @@
   "private": true,
   "description": "Type-safe HTTP contracts for ReScript: endpoint contracts, codecs and a typed client.",
   "license": "MIT",
+  "homepage": "https://resapi.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasidelogic/resapi.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "rescript",
+    "http",
+    "api",
+    "contract",
+    "typed-client"
+  ],
   "type": "module",
+  "files": [
+    "src/*.res",
+    "src/*.resi",
+    "rescript.json"
+  ],
   "peerDependencies": {
     "rescript": "^12.3.1"
   }

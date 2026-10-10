@@ -4,7 +4,27 @@
   "private": true,
   "description": "Hono server adapter for resAPI contracts.",
   "license": "MIT",
+  "homepage": "https://resapi.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasidelogic/resapi.git",
+    "directory": "packages/hono"
+  },
+  "keywords": [
+    "rescript",
+    "http",
+    "api",
+    "contract",
+    "typed-client",
+    "hono",
+    "cloudflare-workers"
+  ],
   "type": "module",
+  "files": [
+    "src/*.res",
+    "src/*.resi",
+    "rescript.json"
+  ],
   "dependencies": {
     "@resapi/core": "*",
     "hono": "4.13.13"
