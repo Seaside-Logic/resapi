@@ -27,6 +27,17 @@ test("returning Some(response) answers early and skips the handler", async () =>
   assert.ok(!Fixture.events.includes("handler"));
 });
 
+test("middleware wraps typed endpoints: it can reject, and it sees and changes their responses", async () => {
+  assert.equal((await call("/accounts/a1")).status, 401);
+  assert.ok(!Fixture.events.includes("handler"));
+  Fixture.events.length = 0;
+  const res = await call("/accounts/a1", { headers: { authorization: "Bearer secret" } });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("x-powered-by"), "resAPI");
+  assert.deepEqual(await res.json(), { id: "a1", name: "Ann" });
+  assert.deepEqual(Fixture.events, ["outer:before", "inner:before", "handler", "inner:after", "outer:after"]);
+});
+
 test("Hono's logger middleware works through a one-line binding", async () => {
   await call("/ok");
   assert.equal(Fixture.logLines.length, 2);

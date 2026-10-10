@@ -40,6 +40,7 @@ let app: Router.t<unit> =
   ->Router.use(~path="/denied", deny)
   ->Router.use(~path="/protected", bearerAuth({token: "secret"}))
   ->Router.use(~path="/middleware-throws", throwingMiddleware)
+  ->Router.use(~path="/accounts/*", bearerAuth({token: "secret"}))
   ->Router.get("/ok", async _ctx => {
     events->Array.push("handler")
     Fetch.Response.text("ok")
@@ -53,3 +54,9 @@ let app: Router.t<unit> =
   ->Router.get("/uncaught-rescript", async _ctx => throw(Failure("boom")))
   ->Router.get("/uncaught-js", async _ctx => JsError.throwWithMessage("boom"))
   ->Router.get("/uncaught-typed", async _ctx => throw(Not_found))
+  ->Router.register(
+    TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) => {
+      events->Array.push("handler")
+      Ok({id: params.id, name: "Ann"})
+    }),
+  )
