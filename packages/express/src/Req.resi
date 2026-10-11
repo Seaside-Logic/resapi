@@ -11,7 +11,9 @@ type t
 @get external method: t => string = "method"
 @get external path: t => string = "path"
 
-/** Stores a value on the request under `key` (as `req[name]`), usually in middleware. */
+/** Stores a value on the request under `key` (as `req[name]`), usually in middleware. The name shares
+    `req` with Express's own fields: a getter such as `query` or `path` throws, and a field Express writes,
+    such as `params` or `body`, gets overwritten. Pick a name Express doesn't use. */
 let set: (t, ResApi.Key.t<'a>, 'a) => unit
 
 /** The value under `key` (`req[name]`), or `None` when it's unset, `undefined` or `null`. */

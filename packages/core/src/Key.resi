@@ -6,7 +6,8 @@ type t<'a>
 
 /** Annotate the type when you make one: `let userKey: Key.t<User.t> = Key.make("user")`. The name is
     the framework's own: Hono's `c.set`/`c.get` name, or the property on Express's `req`. So
-    `Key.make("jwtPayload")` reads what hono/jwt sets, and `Key.make("user")` reads Passport's `req.user`. */
+    `Key.make("jwtPayload")` reads what hono/jwt sets, and `Key.make("user")` reads Passport's `req.user`. On Express the name is a property on `req`, so don't reuse one
+    of Express's own (`query`, `path`, `params`, `body`...). */
 let make: string => t<'a>
 
 let name: t<'a> => string

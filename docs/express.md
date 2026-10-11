@@ -131,6 +131,8 @@ let requireUser: Router.middleware = (req, res, next) =>
 
 Mount it with `Router.make()->Router.use(Auth.requireUser)->Router.register(...)`, and read the user in a handler with `req->Req.getOrThrow(Auth.userKey)`. A key named `"user"` also reads Passport's `req.user`.
 
+**Pick key names Express doesn't use.** On Express, a key is a property on `req` itself, so it shares the namespace with Express's own fields. A name backed by a getter, such as `query`, `path`, `hostname`, `ip`, `protocol` or `secure`, makes `Req.set` throw a `TypeError`. A name Express or resAPI writes, such as `params`, `body`, `route` or `baseUrl`, is overwritten later in the request, or breaks what reads it. Use a distinctive name (`"user"`, `"account"`, `"apiKey"`), or one that matches the middleware you're reading from. Hono keeps `c.set` values in a separate map, so this only applies to Express.
+
 ## Routing beside typed endpoints
 
 - **`Router.all(path, handler)`** is a plain route for every HTTP method.
