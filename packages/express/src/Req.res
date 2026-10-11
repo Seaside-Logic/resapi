@@ -10,3 +10,17 @@ type t
 @send @return(nullable) external header: (t, string) => option<string> = "get"
 @get external method: t => string = "method"
 @get external path: t => string = "path"
+
+@get_index external field: (t, string) => Nullable.t<'a> = ""
+@set_index external setField: (t, string, 'a) => unit = ""
+
+let set = (req, key, value) => req->setField(ResApi.Key.name(key), value)
+let get = (req, key) => req->field(ResApi.Key.name(key))->Nullable.toOption
+let getOrThrow = (req, key) =>
+  switch req->get(key) {
+  | Some(value) => value
+  | None =>
+    JsError.throwWithMessage(
+      `No value for key "${ResApi.Key.name(key)}": is its middleware mounted for this path?`,
+    )
+  }

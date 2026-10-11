@@ -25,3 +25,13 @@ let path: t<'env> => string
 
 /** The original Fetch Request (Hono's `c.req.raw`), for libraries that work on Fetch requests. */
 let request: t<'env> => ResApi.Fetch.Request.t
+
+/** Stores a value for this request under `key` (Hono's `c.set`), usually in middleware. */
+let set: (t<'env>, ResApi.Key.t<'a>, 'a) => unit
+
+/** The value under `key` (Hono's `c.get`), or `None` when it's unset, `undefined` or `null`. */
+let get: (t<'env>, ResApi.Key.t<'a>) => option<'a>
+
+/** For routes behind the middleware that sets `key`. A missing value means that middleware isn't mounted
+    for this path, so this throws: a logged 500 that reveals nothing, inside a typed endpoint. */
+let getOrThrow: (t<'env>, ResApi.Key.t<'a>) => 'a

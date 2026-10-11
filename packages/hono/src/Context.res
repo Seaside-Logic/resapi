@@ -25,3 +25,17 @@ let header = (ctx, name) => ctx->req->reqHeader(name)
 let method = ctx => ctx->req->reqMethod
 let path = ctx => ctx->req->reqPath
 let request = ctx => ctx->req->reqRaw
+
+@send external honoSet: (t<'env>, string, 'a) => unit = "set"
+@send external honoGet: (t<'env>, string) => Nullable.t<'a> = "get"
+
+let set = (ctx, key, value) => ctx->honoSet(ResApi.Key.name(key), value)
+let get = (ctx, key) => ctx->honoGet(ResApi.Key.name(key))->Nullable.toOption
+let getOrThrow = (ctx, key) =>
+  switch ctx->get(key) {
+  | Some(value) => value
+  | None =>
+    JsError.throwWithMessage(
+      `No value for key "${ResApi.Key.name(key)}": is its middleware mounted for this path?`,
+    )
+  }
