@@ -9,7 +9,7 @@ resAPI works with [Hono](https://hono.dev) (including Cloudflare Workers) and [E
 - **Website:** https://resapi.dev
 - **Get started:** [docs/getting-started.md](docs/getting-started.md) (Hono on Workers), then the [Hono](docs/hono.md) or [Express](docs/express.md) guide
 
-> **Status: 0.1.0 preview.** The API may change in 0.x releases. See the [changelog](CHANGELOG.md) for what is supported and the known limitations.
+> **Status: 0.2.0 preview.** The API may change in 0.x releases. See the [changelog](CHANGELOG.md) for what is supported and the known limitations.
 
 ## Why
 

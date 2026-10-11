@@ -2,9 +2,9 @@
 
 All four packages (`@resapi/core`, `@resapi/hono`, `@resapi/express`, `@resapi/sury`) are released together with the same version.
 
-## Unreleased
+## 0.2.0 (preview)
 
-Not published. These changes come from a design phase that tested 0.1.0 against a real application (WealthJack) and a second, deliberately different Express service.
+These changes come from testing 0.1.0 against a real application (WealthJack) and a second, deliberately different Express service. The main one: auth is ordinary Hono or Express middleware, and resAPI adds two small helpers so the rejection and the signed-in user are typed on both ends.
 
 ### Breaking changes
 
@@ -23,7 +23,7 @@ Not published. These changes come from a design phase that tested 0.1.0 against 
 
 - **Auth as middleware:**
   - `Reject.unauthenticated`/`forbidden` (both adapters) answer in a shape the client reads as `Unauthorized` with a reason.
-  - `ResApi.Key` with `Context.set/get/getOrThrow` (Hono) and `Req.set/get/getOrThrow` (Express) pass typed values, such as the signed-in user, from middleware to handlers.
+  - `ResApi.Key` with `Context.set/get/getOrThrow` (Hono) and `Req.set/get/getOrThrow` (Express) pass typed values, such as the signed-in user, from middleware to handlers. On Express a key is a property on `req`, so its name mustn't be one of Express's own.
 - **`Client.message`:** English defaults for every client error except declared errors.
 - **Codec combinators:**
   - primitives: `string`, `int`, `float`, `bool`
@@ -33,7 +33,23 @@ Not published. These changes come from a design phase that tested 0.1.0 against 
   - `Router.all` (both adapters)
   - `Router.notFound` and `Context.request` (Hono)
   - `Endpoint.any` with `Router.assertRegistered`, a test-time check that every contract is registered
+- **`Dispatch.errorResponse`**, the framework error body, for adapters (`Dispatch` stays unstable).
+- **Docs:** a [Hono guide](docs/hono.md) beside the Express one, a compiled auth-middleware example in Getting started, and a section on reading type errors.
 
+### Migrating from 0.1.0
+
+- **Client matches:** remove the `InvalidParams` and `EncodeFailed` arms. Handle `Unauthorized({status, reason})` where 401/403 used to land in `UnexpectedStatus`, or end the match with `Error(error) => Client.message(error, ~declared=...)`.
+- **Programmer errors:** a call with a missing path param or a throwing codec now rejects instead of resolving to `Error(...)`. Let it surface as the bug it is, or catch it where you call.
+- **Fetch:** apply the renames above. Bindings to other libraries that used `ResApi.Fetch` types keep working once their calls are renamed.
+- **Auth:** if handlers checked the session themselves, that still works. To move it into middleware, see [Getting started](docs/getting-started.md#6-protect-endpoints-with-middleware) or the [Hono](docs/hono.md#auth) and [Express](docs/express.md#middleware) guides.
+
+### Tested with
+
+ReScript 12.3.1, Node 22 and 24, Hono 4.13, Express 5.2, Sury 11.0, and Cloudflare Workers through Wrangler's local runtime.
+
+### Known limitations
+
+The 0.1.0 limitations still apply. With auth in middleware, the compiler doesn't check that each endpoint is behind it: a typed endpoint on a path no middleware covers compiles, and `getOrThrow` turns the missing value into a logged 500.
 
 ## 0.1.0 (preview)
 

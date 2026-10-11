@@ -1,6 +1,6 @@
 {
   "name": "@resapi/sury",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sury schema adapter for resAPI codecs.",
   "license": "MIT",
   "homepage": "https://resapi.dev",
@@ -32,7 +32,7 @@
     "sury": "^11.0.0"
   },
   "dependencies": {
-    "@resapi/core": "^0.1.0"
+    "@resapi/core": "^0.2.0"
   },
   "devDependencies": {
     "sury": "11.0.0"
