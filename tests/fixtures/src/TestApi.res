@@ -138,6 +138,13 @@ let throwingParams = Endpoint.get(
   ~response=accountCodec,
 )
 
+// Throws a ReScript exception (not a JS Error) while encoding: the call must still reject with an Error.
+let rescriptThrowingParams = Endpoint.get(
+  "/accounts/:id",
+  ~params=encodeOnly(_ => throw(Not_found)),
+  ~response=accountCodec,
+)
+
 // Its body decoder throws, for the server's internal-error path.
 let throwingBody = Endpoint.post(
   "/throwing-body",

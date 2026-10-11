@@ -8,12 +8,11 @@ type t = {
 
 type error<'e> =
   | Application({status: int, error: 'e})
+  | Unauthorized({status: int, reason: option<string>})
   | Network(string)
   | Aborted
   | UnexpectedStatus({status: int, body: string})
   | InvalidResponse(Codec.error)
-  | InvalidParams(string)
-  | EncodeFailed(string)
 
 @val external encodeURIComponent: string => string = "encodeURIComponent"
 
@@ -29,13 +28,15 @@ let joinUrl = (baseUrl, path) => {
   path->String.startsWith("/") ? base ++ path : `${base}/${path}`
 }
 
+// calling code, and nothing has been sent (like an invalid baseUrl, which makes Request throw).
 let paramValue = (values, name) =>
   switch values->Dict.get(name) {
-  | Some(JSON.String(s)) => Ok(s)
-  | Some(Number(n)) => Ok(n->Float.toString)
-  | Some(Boolean(b)) => Ok(b ? "true" : "false")
-  | Some(_) => Error(InvalidParams(`Path parameter "${name}" must be a string, number or boolean`))
-  | None => Error(InvalidParams(`Missing path parameter "${name}"`))
+  | Some(JSON.String(s)) => s
+  | Some(Number(n)) => n->Float.toString
+  | Some(Boolean(b)) => b ? "true" : "false"
+  | Some(_) =>
+    JsError.throwWithMessage(`Path parameter "${name}" must be a string, number or boolean`)
+  | None => JsError.throwWithMessage(`Missing path parameter "${name}"`)
   }
 
 /** Fills `:name` segments from the encoded params object, percent-encoding each value. */
@@ -46,22 +47,19 @@ let buildPath = (path, params: JSON.t) => {
   }
   path
   ->String.split("/")
-  ->Array.reduce(Ok([]), (acc, segment) =>
-    acc->Result.flatMap(segments =>
-      segment->String.startsWith(":")
-        ? paramValue(values, segment->String.slice(~start=1))->Result.map(
-            value => [...segments, encodeURIComponent(value)],
-          )
-        : Ok([...segments, segment])
-    )
+  ->Array.map(segment =>
+    segment->String.startsWith(":")
+      ? encodeURIComponent(paramValue(values, segment->String.slice(~start=1)))
+      : segment
   )
-  ->Result.map(segments => segments->Array.join("/"))
+  ->Array.join("/")
 }
 
-let encodeWith = (encode, value) =>
-  try Ok(encode(value)) catch {
-  | JsExn(e) => Error(EncodeFailed(e->JsExn.message->Option.getOr("Encoding failed")))
-  | _ => Error(EncodeFailed("Encoding failed"))
+// A ReScript exception becomes a JS Error, so the rejected call always carries a message and a stack.
+let encodeOrThrow = (encode, value) =>
+  try encode(value) catch {
+  | JsExn(e) => JsExn.throw(e)
+  | _ => JsError.throwWithMessage("Encoding failed")
   }
 
 let parseJson = text =>
@@ -74,21 +72,38 @@ let decodeResponse = (contract: Endpoint.t<_, _, _, _>, text) =>
   ->Result.flatMap(contract.responseCodec.decode)
   ->Result.mapError(e => InvalidResponse(e))
 
-// A non-2xx body of `{"applicationError": ...}` is a declared error and must decode as one; anything
-// else (framework errors, proxies, plain text) is just an unexpected status.
-let decodeFailure = (contract: Endpoint.t<_, _, _, _>, status, text) =>
-  switch parseJson(text) {
-  | Ok(Object(body)) =>
-    switch body->Dict.get("applicationError") {
-    | Some(json) =>
-      switch contract.errorCodec.decode(json) {
-      | Ok(error) => Error(Application({status, error}))
-      | Error(e) => Error(InvalidResponse({...e, path: ["applicationError", ...e.path]}))
-      }
-    | None => Error(UnexpectedStatus({status, body: text}))
-    }
-  | _ => Error(UnexpectedStatus({status, body: text}))
+// The reason a resAPI rejection (the adapters' `Reject`) carries, when this body is one.
+let rejectionReason = json =>
+  switch json {
+  | Ok(JSON.Object(dict{
+      "error": JSON.Object(dict{
+        "kind": JSON.String("unauthenticated" | "forbidden"),
+        "message": JSON.String(message),
+      }),
+    })) if message != "" =>
+    Some(message)
+  | _ => None
   }
+
+// A declared error (`{"applicationError": ...}`) wins at any status and must decode as one. Otherwise
+// 401 and 403 are Unauthorized, from resAPI's Reject or any other middleware; the rest is unexpected.
+let decodeFailure = (contract: Endpoint.t<_, _, _, _>, status, text) => {
+  let json = parseJson(text)
+  let declared = switch json {
+  | Ok(Object(body)) => body->Dict.get("applicationError")
+  | _ => None
+  }
+  switch declared {
+  | Some(error) =>
+    switch contract.errorCodec.decode(error) {
+    | Ok(error) => Error(Application({status, error}))
+    | Error(e) => Error(InvalidResponse({...e, path: ["applicationError", ...e.path]}))
+    }
+  | None if status == 401 || status == 403 =>
+    Error(Unauthorized({status, reason: rejectionReason(json)}))
+  | None => Error(UnexpectedStatus({status, body: text}))
+  }
+}
 
 // Only the transport is inside the try: codec and status errors are classified elsewhere.
 let fetchText = async (client, request) =>
@@ -113,27 +128,30 @@ let mergeHeaders = sources => {
   merged
 }
 
-let requestInit = (client, contract: Endpoint.t<_, _, _, _>, body, ~headers, ~signal): result<
-  Fetch.Request.requestInit,
-  _,
-> => {
+let requestInit = (
+  client,
+  contract: Endpoint.t<_, _, _, _>,
+  body,
+  ~headers,
+  ~signal,
+): Fetch.Request.requestInit => {
   let signal = signal->Option.map(Nullable.make)
   switch contract.method {
-  | Get =>
-    Ok({
+  | Get => {
       method: "GET",
       headers: Fetch.HeadersInit.fromDict(mergeHeaders([client.headers, headers])),
       ?signal,
-    })
-  | Post =>
-    encodeWith(contract.bodyCodec.encode, body)->Result.map((json): Fetch.Request.requestInit => {
+    }
+  | Post => {
       method: "POST",
       headers: Fetch.HeadersInit.fromDict(
         mergeHeaders([client.headers, dict{"content-type": "application/json"}, headers]),
       ),
-      body: Nullable.make(Fetch.BodyInit.fromString(json->JSON.stringify)),
+      body: Nullable.make(
+        Fetch.BodyInit.fromString(encodeOrThrow(contract.bodyCodec.encode, body)->JSON.stringify),
+      ),
       ?signal,
-    })
+    }
   }
 }
 
@@ -145,21 +163,12 @@ let send = async (
   ~headers=dict{},
   ~signal=?,
 ) => {
-  let prepared =
-    encodeWith(contract.paramsCodec.encode, params)
-    ->Result.flatMap(json => buildPath(contract.path, json))
-    ->Result.flatMap(path =>
-      requestInit(client, contract, body, ~headers, ~signal)->Result.map(init => (path, init))
-    )
-  switch prepared {
+  let path = buildPath(contract.path, encodeOrThrow(contract.paramsCodec.encode, params))
+  let init = requestInit(client, contract, body, ~headers, ~signal)
+  switch await fetchText(client, Fetch.Request.fromURL(joinUrl(client.baseUrl, path), ~init)) {
   | Error(e) => Error(e)
-  | Ok((path, init)) =>
-    // An invalid baseUrl makes Request throw: a configuration bug, not a request failure.
-    switch await fetchText(client, Fetch.Request.fromURL(joinUrl(client.baseUrl, path), ~init)) {
-    | Error(e) => Error(e)
-    | Ok((response, text)) =>
-      response.ok ? decodeResponse(contract, text) : decodeFailure(contract, response.status, text)
-    }
+  | Ok((response, text)) =>
+    response.ok ? decodeResponse(contract, text) : decodeFailure(contract, response.status, text)
   }
 }
 
@@ -167,3 +176,13 @@ let call = (client, contract, ~params, ~headers=?, ~signal=?) =>
   send(client, contract, ~params, ~body=(), ~headers?, ~signal?)
 
 let callWithBody = send
+
+let message = (error, ~declared) =>
+  switch error {
+  | Application({error, _}) => declared(error)
+  | Unauthorized({status: 401, _}) => "Please sign in."
+  | Unauthorized(_) => "You don't have permission to do that."
+  | Network(_) => "Can't reach the server. Check your connection and try again."
+  | Aborted => "The request was cancelled."
+  | UnexpectedStatus(_) | InvalidResponse(_) => "Something went wrong. Please try again."
+  }

@@ -55,23 +55,24 @@ test("POST sends the encoded body as JSON", async () => {
   assert.deepEqual(await requests[0].json(), { name: "Ann" });
 });
 
-test("a missing path param is InvalidParams and sends nothing", async () => {
+const rejectsWith = message => error => error instanceof Error && message.test(error.message);
+
+test("a missing path param rejects the call with an Error and sends nothing", async () => {
   const { client, requests } = recording("https://x.dev");
-  const result = await Client.call(client, TestApi.missingParam, "x");
-  assert.equal(result._0.TAG, "InvalidParams");
-  assert.match(result._0._0, /Missing path parameter "id"/);
+  await assert.rejects(Client.call(client, TestApi.missingParam, "x"), rejectsWith(/Missing path parameter "id"/));
   assert.equal(requests.length, 0);
 });
 
-test("a non-scalar path param is InvalidParams", async () => {
-  const result = await Client.call(recording("https://x.dev").client, TestApi.nonScalarParam, "x");
-  assert.equal(result._0.TAG, "InvalidParams");
-  assert.match(result._0._0, /must be a string, number or boolean/);
+test("a non-scalar path param rejects the call", async () => {
+  await assert.rejects(Client.call(recording("https://x.dev").client, TestApi.nonScalarParam, "x"), rejectsWith(/must be a string, number or boolean/));
 });
 
-test("a codec that throws while encoding is EncodeFailed, not Network", async () => {
-  const result = await Client.call(recording("https://x.dev").client, TestApi.throwingParams, "x");
-  assert.deepEqual(result, { TAG: "Error", _0: { TAG: "EncodeFailed", _0: "cannot encode" } });
+test("a codec that throws while encoding rejects with its Error", async () => {
+  await assert.rejects(Client.call(recording("https://x.dev").client, TestApi.throwingParams, "x"), rejectsWith(/^cannot encode$/));
+});
+
+test("a codec that throws a ReScript exception still rejects with a JS Error", async () => {
+  await assert.rejects(Client.call(recording("https://x.dev").client, TestApi.rescriptThrowingParams, "x"), rejectsWith(/^Encoding failed$/));
 });
 
 test("a fetch failure is Network", async () => {
@@ -178,4 +179,34 @@ test("a framework error body is UnexpectedStatus, not an application error", asy
     TAG: "Error",
     _0: { TAG: "UnexpectedStatus", status: 400, body },
   });
+});
+
+const failWith = (status, body) => recording("https://x.dev", () => new Response(typeof body === "string" ? body : JSON.stringify(body), { status })).client;
+const unauthorized = (status, reason) => ({ TAG: "Error", _0: { TAG: "Unauthorized", status, reason } });
+
+test("a resAPI rejection is Unauthorized, with its reason", async () => {
+  const body = { error: { kind: "forbidden", message: "mfa_required", path: [] } };
+  assert.deepEqual(await Client.call(failWith(403, body), TestApi.getAccount, { id: "a1" }), unauthorized(403, "mfa_required"));
+});
+
+test("a rejection with an empty reason is Unauthorized with no reason", async () => {
+  const body = { error: { kind: "unauthenticated", message: "", path: [] } };
+  assert.deepEqual(await Client.call(failWith(401, body), TestApi.getAccount, { id: "a1" }), unauthorized(401, undefined));
+});
+
+test("any other 401 or 403 is Unauthorized with no reason", async () => {
+  assert.deepEqual(await Client.call(failWith(401, "Unauthorized"), TestApi.getAccount, { id: "a1" }), unauthorized(401, undefined));
+  const otherKind = { error: { kind: "invalid_params", message: "x", path: [] } };
+  assert.deepEqual(await Client.call(failWith(403, otherKind), TestApi.getAccount, { id: "a1" }), unauthorized(403, undefined));
+});
+
+test("Client.message gives a default for every case but declared errors", () => {
+  const declared = error => `declared ${error}`;
+  assert.equal(Client.message({ TAG: "Application", status: 404, error: "NotFound" }, declared), "declared NotFound");
+  assert.equal(Client.message({ TAG: "Unauthorized", status: 401, reason: undefined }, declared), "Please sign in.");
+  assert.equal(Client.message({ TAG: "Unauthorized", status: 403, reason: "x" }, declared), "You don't have permission to do that.");
+  assert.equal(Client.message({ TAG: "Network", _0: "offline" }, declared), "Can't reach the server. Check your connection and try again.");
+  assert.equal(Client.message("Aborted", declared), "The request was cancelled.");
+  assert.equal(Client.message({ TAG: "UnexpectedStatus", status: 502, body: "" }, declared), "Something went wrong. Please try again.");
+  assert.equal(Client.message({ TAG: "InvalidResponse", _0: { path: [], message: "x" } }, declared), "Something went wrong. Please try again.");
 });

@@ -17,7 +17,7 @@ let describe = async client =>
   | Ok(account) => account.name
   | Error(Application({error: NotFound})) => "not found"
   | Error(Application({error: AccessDenied, status})) => `denied (${status->Int.toString})`
-  | Error(Network(_) | UnexpectedStatus(_) | InvalidResponse(_) | InvalidParams(_) | EncodeFailed(_)) =>
+  | Error(Network(_) | Aborted | Unauthorized(_) | UnexpectedStatus(_) | InvalidResponse(_)) =>
     "failed"
   }
 let typedErrorRoute: EndpointHandler.route<unit> = TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>

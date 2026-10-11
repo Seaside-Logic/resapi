@@ -6,7 +6,7 @@ let getAccount = (client, id) => client->Client.call(AccountApi.getAccount, ~par
 let createAccount = (client, newAccount) =>
   client->Client.callWithBody(AccountApi.createAccount, ~params=(), ~body=newAccount)
 
-// What a caller writes: every outcome is a typed case.
+// What a caller writes: the cases it handles, then Error(_) for the rest.
 let describe = async (client, id) =>
   switch await client->getAccount(id) {
   | Ok(account) => `${account.name}: ${account.balance->Float.toString}`
@@ -15,6 +15,5 @@ let describe = async (client, id) =>
   | Error(Aborted) => "cancelled"
   | Error(InvalidResponse({path, message})) =>
     `invalid response at [${path->Array.join(".")}]: ${message}`
-  | Error(UnexpectedStatus({status})) => `unexpected status ${status->Int.toString}`
-  | Error(InvalidParams(message) | EncodeFailed(message)) => `bad request: ${message}`
+  | Error(_) => "request failed"
   }
