@@ -66,7 +66,7 @@ scenario sury-client "$(tgz core)" "$(tgz sury)" "${SURY[@]}"
 scenario hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
 scenario express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
 
-DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "$(tgz express)" "${SURY[@]}" hono@4.13.13 express@5.2.1
 DOC=docs/getting-started.md scenario doc-getting-started "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
 DOC=docs/express.md scenario doc-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
 DOC=docs/hono.md scenario doc-hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13

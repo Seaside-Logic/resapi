@@ -73,6 +73,34 @@ let app: Router.t<unit> =
 let default = app
 ```
 
+The same server on Express 5, for Node. Install `@resapi/express` and `express` in place of `@resapi/hono` and `hono`:
+
+```rescript
+// ExpressApp.res
+open ResApiExpress
+
+let accounts: dict<AccountApi.account> = dict{
+  "acct_123": {id: "acct_123", name: "Savings", balance: 100.0},
+}
+
+let app =
+  Router.make()
+  ->Router.get("/health", async (_req, res) => res->Res.send("ok"))
+  ->Router.register(
+    AccountApi.getAccount->EndpointHandler.make(async (_req, {params}) =>
+      switch accounts->Dict.get(params.id) {
+      | Some(account) => Ok(account)
+      | None => Error(NotFound)
+      }
+    ),
+  )
+```
+
+```rescript
+// Server.res
+let server = ExpressApp.app->ResApiExpress.Router.listen(3000, () => Console.log("Listening on :3000"))
+```
+
 The client:
 
 ```rescript
