@@ -27,10 +27,19 @@ let thirdParty: Router.middleware<unit> = async (ctx, next) => {
   None
 }
 
+// Sets the value to null, as middleware does for "nobody".
+@send external honoSetNull: (Context.t<'env>, string, Null.t<string>) => unit = "set"
+let nullTenant: Router.middleware<unit> = async (ctx, next) => {
+  ctx->honoSetNull("tenant", Null.null)
+  await next()
+  None
+}
+
 let app: Router.t<unit> =
   Router.make()
   ->Router.use(~path="/accounts/*", requireUser)
   ->Router.use(~path="/tenant", thirdParty)
+  ->Router.use(~path="/null-tenant", nullTenant)
   ->Router.register(
     TestApi.getAccount->EndpointHandler.make(async (ctx, {params}) => Ok({
       id: params.id,
@@ -42,6 +51,15 @@ let app: Router.t<unit> =
   )
   ->Router.get("/no-tenant", async ctx =>
     Fetch.Response.fromString(ctx->Context.get(tenantKey)->Option.getOr("none"))
+  )
+  ->Router.get("/null-tenant", async ctx =>
+    Fetch.Response.fromString(ctx->Context.get(tenantKey)->Option.getOr("none"))
+  )
+  ->Router.register(
+    TestApi.createAccount->EndpointHandler.make(async (ctx, {body}) => Ok({
+      id: "new",
+      name: `${body.name} by ${(ctx->Context.getOrThrow(userKey)).name}`,
+    })),
   )
 
 // The route is registered before the middleware: Hono runs handlers in registration order, so the

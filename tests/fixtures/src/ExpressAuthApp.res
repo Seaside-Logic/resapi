@@ -10,6 +10,7 @@ let requireUser: Router.middleware = (req, res, next) =>
   switch req->Req.header("x-user") {
   | None => Reject.unauthenticated(res)
   | Some("mallory") => Reject.forbidden(res, ~reason="banned")
+  | Some("eve") => Reject.forbidden(res)
   | Some(name) =>
     req->Req.set(userKey, {name: name})
     next()

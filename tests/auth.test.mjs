@@ -23,9 +23,10 @@ test("hono: middleware stores the user under a key, and the typed handler reads 
   assert.deepEqual(await res.json(), { id: "a1", name: "ann" });
 });
 
-test("hono: a key reads a value set with Hono's own c.set; unset is None", async () => {
+test("hono: a key reads a value set with Hono's own c.set; unset or null is None", async () => {
   assert.equal(await (await hono(AuthApp.app, "/tenant")).text(), "acme");
   assert.equal(await (await hono(AuthApp.app, "/no-tenant")).text(), "none");
+  assert.equal(await (await hono(AuthApp.app, "/null-tenant")).text(), "none");
 });
 
 test("hono: middleware registered after the route doesn't run for it; getOrThrow makes that an opaque 500", async t => {
@@ -69,6 +70,24 @@ test("express: Reject answers 401 and 403 in resAPI's error shape", async () => 
   const banned = await fetch(`${expressBase}/accounts/a1`, as("mallory"));
   assert.equal(banned.status, 403);
   assert.deepEqual(await banned.json(), rejection("forbidden", "banned"));
+  const noReason = await fetch(`${expressBase}/accounts/a1`, as("eve"));
+  assert.equal(noReason.status, 403);
+  assert.deepEqual(await noReason.json(), rejection("forbidden"));
+});
+
+test("hono: a rejected POST is answered without reading its body", async () => {
+  let pulled = false;
+  // A body that never ends: reading it would hang the request.
+  const body = new ReadableStream({ pull() { pulled = true; } }, { highWaterMark: 0 });
+  const res = await hono(AuthApp.app, "/accounts", { method: "POST", body, duplex: "half" });
+  assert.equal(res.status, 401);
+  assert.deepEqual(await res.json(), rejection("unauthenticated"));
+  assert.equal(pulled, false);
+});
+
+test("hono: an authenticated POST reaches the typed handler with the user", async () => {
+  const res = await hono(AuthApp.app, "/accounts", { method: "POST", body: JSON.stringify({ name: "Acct" }), headers: { "x-user": "ann" } });
+  assert.deepEqual(await res.json(), { id: "new", name: "Acct by ann" });
 });
 
 test("express: a rejected request is answered before its body is read", async () => {
