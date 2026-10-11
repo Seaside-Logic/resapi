@@ -7,7 +7,7 @@ Define an HTTP endpoint once as a contract: method, path, and codecs for params,
 resAPI works with [Hono](https://hono.dev) (including Cloudflare Workers) and [Express](https://expressjs.com) 5 on the server, any Fetch environment on the client, and [Sury](https://github.com/DZakh/sury) schemas or hand-written codecs.
 
 - **Website:** https://resapi.dev
-- **Get started:** [docs/getting-started.md](docs/getting-started.md) (Hono on Workers) or [docs/express.md](docs/express.md)
+- **Get started:** [docs/getting-started.md](docs/getting-started.md) (Hono on Workers), then the [Hono](docs/hono.md) or [Express](docs/express.md) guide
 
 > **Status: 0.1.0 preview.** The API may change in 0.x releases. See the [changelog](CHANGELOG.md) for what is supported and the known limitations.
 
@@ -105,6 +105,7 @@ No adapter depends on another, and core depends on none of them. Any codec that 
 ## Documentation
 
 - [Getting started](docs/getting-started.md): contract, Hono server, Cloudflare Worker, client
+- [Hono](docs/hono.md): the Hono adapter in detail: middleware and auth, request bodies, routing, Workers
 - [Express](docs/express.md): the same with Express 5 on Node
 - [Errors](docs/errors.md): every failure the server and client report, and the wire formats
 - [API reference](docs/api.md)

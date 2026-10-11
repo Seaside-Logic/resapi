@@ -2,7 +2,7 @@
 
 This guide builds a small API with one typed endpoint, serves it from a Cloudflare Worker, and calls it from a typed client. It assumes you know ReScript, but not resAPI or Hono.
 
-The complete version is in [`examples/cloudflare`](../examples/cloudflare).
+The complete version is in [`examples/cloudflare`](../examples/cloudflare). The [Hono guide](hono.md) collects the adapter's details for reference, and the [Express guide](express.md) covers Express.
 
 ## 1. Install
 

@@ -192,6 +192,8 @@ The server pipeline shared by `@resapi/hono` and `@resapi/express`. It is public
 
 ## `@resapi/hono` (namespace `ResApiHono`)
 
+Hono 4. See the [Hono guide](hono.md).
+
 ### `Router`
 
 ```rescript

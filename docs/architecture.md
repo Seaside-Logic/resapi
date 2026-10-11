@@ -89,6 +89,8 @@ Hono provides routing, path matching and Fetch integration. resAPI uses Hono's f
 
 Any exception from a codec or handler is logged as the JS `Error` itself, so the stack is preserved. The client gets `500 {"error": {"kind": "internal", "message": "Internal Server Error"}}` and no detail.
 
+Usage details (middleware and auth, the `'env` annotations, body limits, Workers) are in the [Hono guide](hono.md).
+
 ## Server adapter: Express
 
 `@resapi/express` follows the Hono adapter's shape on Express 5:

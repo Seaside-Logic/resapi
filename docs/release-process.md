@@ -42,10 +42,11 @@ The go-live plan listed eight guides. They are folded into fewer files, so nothi
 
 | Planned | Where it lives |
 | --- | --- |
-| getting-started, hono, cloudflare | [getting-started.md](getting-started.md), which uses Hono on Workers |
+| getting-started, cloudflare | [getting-started.md](getting-started.md), which uses Hono on Workers |
+| hono | [hono.md](hono.md) |
 | express | [express.md](express.md) |
 | contracts, client | [api.md](api.md) plus getting-started sections 2 and 5 |
 | errors | [errors.md](errors.md) |
 | architecture | [architecture.md](architecture.md) |
 
-Whole-file examples in the README, getting-started and the Express guide are compiled and run against the packed packages by `npm run check:packages`. To have a block checked, give it a first line of `// Name.res`.
+Whole-file examples in the README, getting-started and the Hono and Express guides are compiled and run against the packed packages by `npm run check:packages`. To have a block checked, give it a first line of `// Name.res`.
