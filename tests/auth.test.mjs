@@ -2,6 +2,7 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import http from "node:http";
 import * as AuthApp from "./fixtures/src/AuthApp.res.mjs";
 import * as ExpressAuthApp from "./fixtures/src/ExpressAuthApp.res.mjs";
 
@@ -46,4 +47,37 @@ test("express: middleware stores the user on req under a key, and the typed hand
 test("express: a key reads a Passport-style req.user, and null is None", async () => {
   assert.equal(await (await fetch(`${expressBase}/passport`, { headers: { "x-passport": "bo" } })).text(), "bo");
   assert.equal(await (await fetch(`${expressBase}/passport`)).text(), "nobody");
+});
+
+const rejection = (kind, message = "") => ({ error: { kind, message, path: [] } });
+
+test("hono: Reject answers 401 and 403 in resAPI's error shape, with an optional reason", async () => {
+  const anonymous = await hono(AuthApp.app, "/accounts/a1");
+  assert.equal(anonymous.status, 401);
+  assert.deepEqual(await anonymous.json(), rejection("unauthenticated"));
+  const banned = await hono(AuthApp.app, "/accounts/a1", as("mallory"));
+  assert.equal(banned.status, 403);
+  assert.deepEqual(await banned.json(), rejection("forbidden", "banned"));
+  const noReason = await hono(AuthApp.app, "/accounts/a1", as("eve"));
+  assert.deepEqual(await noReason.json(), rejection("forbidden"));
+});
+
+test("express: Reject answers 401 and 403 in resAPI's error shape", async () => {
+  const anonymous = await fetch(`${expressBase}/accounts/a1`);
+  assert.equal(anonymous.status, 401);
+  assert.deepEqual(await anonymous.json(), rejection("unauthenticated"));
+  const banned = await fetch(`${expressBase}/accounts/a1`, as("mallory"));
+  assert.equal(banned.status, 403);
+  assert.deepEqual(await banned.json(), rejection("forbidden", "banned"));
+});
+
+test("express: a rejected request is answered before its body is read", async () => {
+  const { port } = new URL(expressBase);
+  const req = http.request({ port, path: "/accounts", method: "POST", headers: { "content-type": "application/json", "content-length": "1000000" } });
+  const response = new Promise((resolve, reject) => { req.on("response", resolve); req.on("error", reject); });
+  req.write('{"name":'); // the rest never arrives
+  const res = await response;
+  assert.equal(res.statusCode, 401);
+  res.resume();
+  req.destroy();
 });

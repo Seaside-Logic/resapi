@@ -8,7 +8,8 @@ let userKey: Key.t<user> = Key.make("user")
 
 let requireUser: Router.middleware = (req, res, next) =>
   switch req->Req.header("x-user") {
-  | None => res->Res.status(401)->Res.send("no user")
+  | None => Reject.unauthenticated(res)
+  | Some("mallory") => Reject.forbidden(res, ~reason="banned")
   | Some(name) =>
     req->Req.set(userKey, {name: name})
     next()

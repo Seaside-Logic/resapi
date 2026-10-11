@@ -6,10 +6,12 @@ type user = {name: string}
 
 let userKey: Key.t<user> = Key.make("user")
 
-// x-user: none → 401 (Task 2 adds Reject); otherwise the user, stored under userKey.
+// x-user: none → 401, "mallory" → 403 with a reason, "eve" → 403 without one, otherwise the user.
 let requireUser: Router.middleware<unit> = async (ctx, next) =>
   switch ctx->Context.header("x-user") {
-  | None => Some(Fetch.Response.fromString("no user", ~init={status: 401}))
+  | None => Some(Reject.unauthenticated())
+  | Some("mallory") => Some(Reject.forbidden(~reason="banned"))
+  | Some("eve") => Some(Reject.forbidden())
   | Some(name) =>
     ctx->Context.set(userKey, {name: name})
     await next()

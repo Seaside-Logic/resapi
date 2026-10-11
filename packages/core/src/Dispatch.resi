@@ -8,6 +8,15 @@ type response = {status: int, body: JSON.t}
 /** The request body, as the adapter has it. `Parsed` is JSON already parsed by framework middleware. */
 type rawBody = Text(promise<string>) | Parsed(JSON.t)
 
+/** The framework error body, `{"error": {"kind", "message", "path"}}`, with its status. The adapters'
+    `Reject` uses it for auth rejections. */
+let errorResponse: (
+  ~status: int,
+  ~kind: string,
+  ~message: string,
+  ~path: array<string>=?,
+) => response
+
 /** `readBody` is called only for POST, after params decode. `handle` must return one of the contract's
     declared errors. Any exception from a codec, `handle` or reading the body is logged and answered
     with a 500 that reveals nothing. */
