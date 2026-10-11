@@ -11,7 +11,26 @@ type error = {path: array<string>, message: string}
 type t<'a> = {decode: JSON.t => result<'a, error>, encode: 'a => JSON.t}
 
 let unit: t<unit>  // decodes anything to (), encodes to {}
+let string: t<string>
+let int: t<int>          // rejects non-integers and values outside 32 bits
+let float: t<float>
+let bool: t<bool>
+let enum: (~values: array<'a>, ~toString: 'a => string, ~name: string=?) => t<'a>
+let array: t<'a> => t<array<'a>>
+let option: t<'a> => t<option<'a>>
+let refine: (t<'a>, 'a => result<'b, string>, 'b => 'a) => t<'b>
+
+type fields
+let field: (fields, string, t<'a>) => 'a
+let object: (~decode: fields => 'a, ~encode: 'a => array<(string, JSON.t)>) => t<'a>
 ```
+
+- **`object`:** decode by building the record literal from `field`s, so a field left out is a compile error. Encode by listing every field.
+- **Missing fields:** a missing field decodes as `null`. An `option` field becomes `None`, and any other fails with "Missing field". `None` encodes as `null`.
+- **`enum`:** with `@as` variants, `~toString=v => (v :> string)` keeps the wire names in the type, and the compiler checks the coercion. List every value in `~values`.
+- **Messages:** the built-in messages are generic ("Expected boolean"). Use `refine` for your own.
+- **Where to refine:** refine a field's codec, not a whole record's, so errors keep the field's path.
+- Any `Codec.t` works, including a hand-written one or `SuryCodec.make(...)`.
 
 Use `Codec.unit` as `~params` for routes without path params. A codec's `path` names the field that failed, as in `["owner", "name"]` or `["tags", "1"]`.
 
@@ -54,18 +73,27 @@ let assertValid: (string, Codec.t<'p>) => unit  // throws on Invalid
 
 `Endpoint.get` and `post` call `assertValid`. `check` is public so tests can assert on the outcome. A `CannotValidate` result means a codec rejected the probe value at a real route param, for example because it refines strings. See the [architecture document](architecture.md#route-checking-at-construction) for the probe and its limits.
 
+### `Key`
+
+```rescript
+type t<'a>
+let make: string => t<'a>   // annotate: let userKey: Key.t<User.t> = Key.make("user")
+let name: t<'a> => string
+```
+
+A typed name for a value middleware stores on a request (`Context.set` on Hono, `Req.set` on Express) and handlers read back. The name is the framework's own, so keys also read values third-party middleware sets. The type is a declaration, not a proof.
+
 ### `Client`
 
 ```rescript
 type t
 type error<'e> =
   | Application({status: int, error: 'e})
+  | Unauthorized({status: int, reason: option<string>})
   | Network(string)
   | Aborted
   | UnexpectedStatus({status: int, body: string})
   | InvalidResponse(Codec.error)
-  | InvalidParams(string)
-  | EncodeFailed(string)
 
 let make: (
   ~baseUrl: string,
@@ -81,14 +109,18 @@ let callWithBody: (
   t, Endpoint.t<'p, 'b, 'r, 'e>, ~params: 'p, ~body: 'b,
   ~headers: dict<string>=?, ~signal: Fetch.AbortSignal.t=?,
 ) => promise<result<'r, error<'e>>>
+
+let message: (error<'e>, ~declared: 'e => string) => string
 ```
 
 - **`make`:** `~fetch` defaults to the global `fetch`.
 - **Headers:** per-call `~headers` override the client's, and both override resAPI's `content-type`. Names are case-insensitive.
 - **`~signal`:** a Fetch `AbortSignal`. Aborting it, or its timeout firing, returns `Error(Aborted)`.
 - **`baseUrl`:** keeps its path prefix, and a trailing slash is optional. An invalid `baseUrl` throws.
-- **`call`:** for contracts without a body.
-- **`callWithBody`:** for POST contracts.
+- **`call`:** for contracts without a body. **`callWithBody`:** for POST contracts.
+- **Throws:** both reject the promise for bugs in the calling code: a missing or non-scalar path param, a codec that throws, an invalid `baseUrl`.
+- **`Unauthorized`:** any 401/403 that isn't a declared error. `reason` comes from a resAPI `Reject`.
+- **`message`:** English defaults for every case except declared errors.
 
 [Errors](errors.md#on-the-client) explains each error variant.
 
@@ -147,6 +179,7 @@ type input<'params, 'body> = {params: 'params, body: 'body}
 type response = {status: int, body: JSON.t}
 type rawBody = Text(promise<string>) | Parsed(JSON.t)
 
+let errorResponse: (~status: int, ~kind: string, ~message: string, ~path: array<string>=?) => response
 let run: (
   Endpoint.t<'p, 'b, 'r, 'e>,
   ~params: dict<string>,
@@ -199,6 +232,9 @@ let path: t<'env> => string
 let res: t<'env> => Fetch.Response.t          // response so far, in middleware after next()
 let setHeader: (t<'env>, string, string) => unit  // response header (Hono's c.header)
 let request: t<'env> => Fetch.Request.t          // the original request (c.req.raw)
+let set: (t<'env>, Key.t<'a>, 'a) => unit
+let get: (t<'env>, Key.t<'a>) => option<'a>   // None when unset, undefined or null
+let getOrThrow: (t<'env>, Key.t<'a>) => 'a     // for routes behind the middleware
 ```
 
 ### `EndpointHandler`
@@ -213,6 +249,15 @@ let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'env, 'p, 'b, 'r, 'e>) => route<'
 ```
 
 The handler receives decoded `params` and `body`, and returns `Ok(response)` (sent as 200) or `Error(declaredError)`. Invalid input is a 400, and an exception is logged and answered with a 500 that reveals nothing. It never reaches Hono's `onError`. [Errors](errors.md#on-the-server) lists every case and the wire formats.
+
+### `Reject`
+
+```rescript
+let unauthenticated: (~reason: string=?) => Fetch.Response.t  // 401
+let forbidden: (~reason: string=?) => Fetch.Response.t        // 403
+```
+
+For middleware: `Some(Reject.forbidden(~reason="mfa_required"))`. The body is `{"error": {"kind": "unauthenticated" | "forbidden", "message": <reason or "">, "path": []}}`.
 
 ## `@resapi/express` (namespace `ResApiExpress`)
 
@@ -252,6 +297,9 @@ let body: t => Nullable.t<JSON.t>        // set by body-parsing middleware
 let header: (t, string) => option<string>
 let method: t => string
 let path: t => string
+let set: (t, Key.t<'a>, 'a) => unit
+let get: (t, Key.t<'a>) => option<'a>   // None when unset, undefined or null
+let getOrThrow: (t, Key.t<'a>) => 'a     // for routes behind the middleware
 
 // Res: Express's response
 type t
@@ -273,6 +321,15 @@ let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'p, 'b, 'r, 'e>) => route
 ```
 
 Behaves as on Hono. Typed-endpoint exceptions never reach Express's error middleware.
+
+### `Reject`
+
+```rescript
+let unauthenticated: (Res.t, ~reason: string=?) => unit  // 401
+let forbidden: (Res.t, ~reason: string=?) => unit        // 403
+```
+
+Sends the response; call it instead of `next()`. The body is the same as on Hono.
 
 ## `@resapi/sury`
 

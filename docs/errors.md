@@ -16,6 +16,8 @@ A typed endpoint (`Router.register`) handles a request in this order. The first 
 | | An exception, or a rejected promise | 500 `internal` |
 | 6. Encode the result | A codec throws, or `errorStatus` isn't 400–599 | 500 `internal` |
 
+**Auth middleware runs first.** Middleware mounted with `Router.use` runs before resAPI's pipeline, so an auth rejection (`Reject`, or any middleware's own 401/403) comes before params and body are checked.
+
 Validation errors and internal errors share one body format:
 
 ```json
@@ -55,25 +57,27 @@ A typed POST accepts any content type, as long as the body is valid JSON. resAPI
 | Variant | When |
 | --- | --- |
 | `Application({status, error})` | The server sent a declared error, and it decoded with the contract's error codec |
+| `Unauthorized({status, reason})` | A 401 or 403 that isn't a declared error, from any middleware. `reason` is set when the body is a resAPI `Reject` with a message |
 | `UnexpectedStatus({status, body})` | Any other non-2xx response: resAPI's own 400s and 500s, framework errors, proxies. `body` is the raw text |
 | `InvalidResponse({path, message})` | The response broke the contract: a 2xx body that isn't JSON or fails the response codec, an `applicationError` that fails the error codec, or an `applicationError` from an endpoint that declares none |
 | `Network(message)` | `fetch` itself failed: DNS, connection refused, CORS |
 | `Aborted` | The call's `~signal` aborted or timed out |
-| `InvalidParams(message)` | A path param is missing or isn't a string, number or boolean. Nothing was sent |
-| `EncodeFailed(message)` | A codec threw while encoding the params or body. Nothing was sent |
 
-An invalid `baseUrl` throws instead of returning an error, because it is a configuration bug, not a request outcome.
+**Programmer errors throw.** An invalid `baseUrl`, a missing or non-scalar path param, or a codec that throws while encoding makes the call reject with a JS `Error`. They're bugs in the calling code, and nothing was sent.
 
-A typical match handles the declared errors precisely and the rest broadly:
+### How a failed response is classified
+
+1. A body with `"applicationError"` is the contract's declared error, at any status, including 401 and 403. If it doesn't decode, or the endpoint declares no errors, it's `InvalidResponse`.
+2. Otherwise, a 401 or 403 is `Unauthorized`. `reason` is `Some(message)` when the body is resAPI's rejection shape (`kind` `"unauthenticated"` or `"forbidden"`, from `Reject`) with a non-empty message. Otherwise it's `None`, for plain text, HTML or any other JSON.
+3. Anything else non-2xx is `UnexpectedStatus`.
+
+A typical match handles the cases the caller cares about, then falls back to `Client.message`:
 
 ```rescript
 switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
-| Ok(account) => Some(account)
-| Error(Application({error: NotFound})) => None
-| Error(Aborted) => None
-| Error(error) => {
-    Console.error(error)
-    None
-  }
+| Ok(account) => Ok(account)
+| Error(Application({error: NotFound})) => Error("No such account.")
+| Error(Unauthorized({reason: Some("mfa_required"), _})) => Error("Turn on two-factor authentication first.")
+| Error(error) => Error(Client.message(error, ~declared=_ => "That didn't work."))
 }
 ```

@@ -98,9 +98,9 @@ npx rescript && node src/Server.res.mjs
 `Router.register` puts a raw-text body parser in front of each typed POST route, so resAPI parses the JSON itself and reports problems in its own format.
 
 - **Content type.** A typed POST accepts any content type, as long as the body is valid JSON: `application/json`, `text/plain`, none at all. Behaviour is the same on Hono.
-- **An upstream `express.json()`** works too. resAPI uses the body it has already parsed. But that parser's failures (malformed JSON, the wrong charset) are answered by Express before resAPI runs, so they come back in Express's format, not resAPI's.
+- **Don't mount body parsers globally in front of typed routes.** resAPI parses typed routes' bodies itself. An upstream `express.json()` works, and resAPI uses the body it parsed. But that parser's failures are answered by Express in Express's format, before any of your auth middleware runs if it's mounted later. Scope parsers to the plain routes that need them, for example `Router.use(~path="/webhooks", json())`.
 - **Size limit.** The built-in parser keeps Express's default limit of 100kb, and an oversized body is a 413 from Express. To change the limit, mount your own parser ahead of the typed routes, for example `express.text({type: () => true, limit: "1mb"})`. resAPI uses a body that has already been read.
-- **Params come first.** resAPI decodes path params before it reads the body, and an invalid param is a 400 without touching the body. That can't help if middleware upstream has already read it.
+- **Order.** Your middleware runs first. Then `register`'s own body parser reads the body, and resAPI decodes params, then the body. A request your auth middleware rejects is never read.
 
 ## Middleware
 
@@ -110,26 +110,32 @@ npx rescript && node src/Server.res.mjs
 @module("express") external json: unit => ResApiExpress.Router.middleware = "json"
 ```
 
-Your own middleware can read headers, reject a request, set response headers, and pass values to handlers. Express has no typed slot for request-scoped values, so bind a field on `Req.t` yourself:
+Your own middleware can read headers, reject a request, set response headers, and pass values to handlers. Use `Reject` for auth rejections, so the typed client sees `Unauthorized`, and a typed key for request-scoped values:
 
 ```rescript
 // src/Auth.res
 open ResApiExpress
 
-@set external setUser: (Req.t, string) => unit = "user"
-@get external user: Req.t => string = "user"
+type user = {name: string}
+let userKey: ResApi.Key.t<user> = ResApi.Key.make("user")
 
 let requireUser: Router.middleware = (req, res, next) =>
   switch req->Req.header("x-user") {
-  | None => res->Res.status(401)->Res.send("Unauthorized")
+  | None => Reject.unauthenticated(res)
   | Some(name) =>
-    req->setUser(name)
+    req->Req.set(userKey, {name: name})
     res->Res.setHeader("x-served-by", "resAPI")->ignore
     next()
   }
 ```
 
-Mount it with `Router.make()->Router.use(Auth.requireUser)->Router.register(...)`, and read the value in a handler with `req->Auth.user`.
+Mount it with `Router.make()->Router.use(Auth.requireUser)->Router.register(...)`, and read the user in a handler with `req->Req.getOrThrow(Auth.userKey)`. A key named `"user"` also reads Passport's `req.user`.
+
+## Routing beside typed endpoints
+
+- **`Router.all(path, handler)`** is a plain route for every HTTP method.
+- **Unmatched requests:** add a last `Router.use` that answers them. Express has no separate not-found handler.
+- **`Router.assertRegistered(router, endpoints)`** throws, naming each listed contract that wasn't mounted with `register`. Call it in a test with a list of every contract (`[Api.getProject->Endpoint.any, ...]`).
 
 ## Errors
 

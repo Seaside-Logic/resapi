@@ -182,11 +182,9 @@ let describe = async id =>
   switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
   | Ok(account) => account.name
   | Error(Application({error: NotFound})) => "not found"
+  | Error(Unauthorized(_)) => "please sign in"
   | Error(Network(message)) => `network error: ${message}`
-  | Error(Aborted) => "cancelled"
-  | Error(InvalidResponse({path, message})) => `bad response at ${path->Array.join(".")}: ${message}`
-  | Error(UnexpectedStatus({status})) => `status ${status->Int.toString}`
-  | Error(InvalidParams(message) | EncodeFailed(message)) => message
+  | Error(error) => Client.message(error, ~declared=_ => "request failed")
   }
 
 let create = (newAccount: AccountApi.newAccount, ~token) =>
@@ -209,7 +207,67 @@ Use `Client.call` for contracts without a body and `Client.callWithBody` for POS
 
 The client module imports only the contract, so a bundle built from it contains no Hono code.
 
-## 6. Test without a server
+**Match the cases you handle, then fall back.** `Client.message(error, ~declared)` gives an English default for every case except the contract's declared errors, which you word yourself. A match that ends with `Error(error) => Client.message(error, ...)` (or `Error(_)`) doesn't have to list cases that can't happen for a given endpoint. The full list is in [Errors](errors.md#on-the-client).
+
+`Client.call` rejects (throws) for bugs in the calling code: a missing path param, a codec that throws, or an invalid `baseUrl`. Nothing is sent in those cases.
+
+## 6. Protect endpoints with middleware
+
+Auth is ordinary Hono middleware, mounted for a path. It runs before resAPI decodes anything, and contracts don't mention it. resAPI adds two small helpers: `Reject` answers in a shape the typed client understands, and a typed key passes the signed-in user to handlers.
+
+```rescript
+// src/Api/ProfileApi.res
+open ResApi
+
+type profile = {name: string}
+
+let profileCodec = Codec.object(
+  ~decode=fields => {name: fields->Codec.field("name", Codec.string)},
+  ~encode=({name}) => [("name", Codec.string.encode(name))],
+)
+
+let getProfile = Endpoint.get("/me", ~params=Codec.unit, ~response=profileCodec)
+```
+
+```rescript
+// src/BearerAuth.res
+open ResApiHono
+
+type user = {name: string}
+
+// The type is declared here; middleware stores the value, handlers read it back.
+let userKey: ResApi.Key.t<user> = ResApi.Key.make("user")
+
+let requireToken: Router.middleware<'env> = async (ctx, next) =>
+  switch ctx->Context.header("authorization") {
+  | None => Some(Reject.unauthenticated())
+  | Some("Bearer secret-token") =>
+    ctx->Context.set(userKey, {name: "Ada"})
+    await next()
+    None
+  | Some(_) => Some(Reject.unauthenticated(~reason="invalid_token"))
+  }
+```
+
+```rescript
+// src/ProfileServer.res
+open ResApiHono
+
+let app: Router.t<unit> =
+  Router.make()
+  ->Router.use(~path="/me", BearerAuth.requireToken)
+  ->Router.register(
+    ProfileApi.getProfile->EndpointHandler.make(async (ctx, _) =>
+      Ok({ProfileApi.name: (ctx->Context.getOrThrow(BearerAuth.userKey)).name})
+    ),
+  )
+```
+
+- **Register middleware before the routes it protects.** Hono runs handlers in registration order.
+- **`Reject`** answers `401 {"error": {"kind": "unauthenticated", "message": "invalid_token", "path": []}}` (or `forbidden` with 403). The client sees `Error(Unauthorized({status, reason}))`, here with `reason: Some("invalid_token")`. Any other middleware's 401 or 403, such as `hono/bearer-auth`'s, is `Unauthorized` too, with `reason: None`.
+- **Keys** use Hono's own `c.set`/`c.get` names, so they also read values that third-party middleware sets (for example `Key.make("jwtPayload")` for `hono/jwt`). `getOrThrow` is for routes behind the middleware. A missing value means it isn't mounted for that path, which becomes a logged 500.
+
+## 7. Test without a server
 
 `Client.make` takes a `~fetch` function. Pass the router's own fetch to run the client against the server in-process:
 
@@ -218,3 +276,12 @@ let client = Client.make(~baseUrl="http://localhost", ~fetch=request => App.app-
 ```
 
 Under Node, this exercises routing, validation and codecs. It doesn't enforce Workers restrictions. For that, run the tests against `wrangler dev` as well (see `scripts/test-worker.sh`).
+
+## Reading type errors
+
+resAPI's checks are type errors, and ReScript prints the full types involved, so some messages are long. Look for the pair "This has type … But it's expected to have type …": it names what you wrote and what the contract requires. With long generic types, the final "The incompatible parts" lines name just the difference. For example, a handler for `getAccount` that returns `Ok("a1")` reports:
+
+```text
+This has type: string
+But it's expected to have type: AccountApi.account
+```
