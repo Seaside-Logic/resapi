@@ -35,35 +35,35 @@ let rethrowAsError = exn =>
     )
   }
 
-let guard = (handler: handler): handler =>
+let catchExceptions = (handler: handler): handler =>
   async (req, res) =>
     try await handler(req, res) catch {
     | exn => rethrowAsError(exn)
     }
 
 let get = (router, path, handler) => {
-  router->expressGet(path, guard(handler))
+  router->expressGet(path, catchExceptions(handler))
   router
 }
 
 let post = (router, path, handler) => {
-  router->expressPost(path, guard(handler))
+  router->expressPost(path, catchExceptions(handler))
   router
 }
 
 let all = (router, path, handler) => {
-  router->expressAll(path, guard(handler))
+  router->expressAll(path, catchExceptions(handler))
   router
 }
 
 let use = (router, ~path=?, middleware: middleware) => {
-  let guarded = (req, res, next) =>
+  let wrapped = (req, res, next) =>
     try middleware(req, res, next) catch {
     | exn => rethrowAsError(exn)
     }
   switch path {
-  | None => router->expressUse(guarded)
-  | Some(path) => router->expressUseAt(path, guarded)
+  | None => router->expressUse(wrapped)
+  | Some(path) => router->expressUseAt(path, wrapped)
   }
   router
 }

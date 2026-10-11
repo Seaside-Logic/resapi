@@ -35,25 +35,25 @@ let rethrowAsError = exn =>
     )
   }
 
-let guard = (handler: handler<'env>): handler<'env> =>
+let catchExceptions = (handler: handler<'env>): handler<'env> =>
   async ctx =>
     try await handler(ctx) catch {
     | exn => rethrowAsError(exn)
     }
 
-let get = (router, path, handler) => router->honoGet(path, guard(handler))
-let post = (router, path, handler) => router->honoPost(path, guard(handler))
-let all = (router, path, handler) => router->honoAll(path, guard(handler))
-let notFound = (router, handler) => router->honoNotFound(guard(handler))
+let get = (router, path, handler) => router->honoGet(path, catchExceptions(handler))
+let post = (router, path, handler) => router->honoPost(path, catchExceptions(handler))
+let all = (router, path, handler) => router->honoAll(path, catchExceptions(handler))
+let notFound = (router, handler) => router->honoNotFound(catchExceptions(handler))
 
 let use = (router, ~path=?, middleware: middleware<'env>) => {
-  let guarded = async (ctx, next) =>
+  let wrapped = async (ctx, next) =>
     try await middleware(ctx, next) catch {
     | exn => rethrowAsError(exn)
     }
   switch path {
-  | None => router->honoUse(guarded)
-  | Some(path) => router->honoUseAt(path, guarded)
+  | None => router->honoUse(wrapped)
+  | Some(path) => router->honoUseAt(path, wrapped)
   }
 }
 
