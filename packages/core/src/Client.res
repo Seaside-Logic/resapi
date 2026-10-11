@@ -28,6 +28,7 @@ let joinUrl = (baseUrl, path) => {
   path->String.startsWith("/") ? base ++ path : `${base}/${path}`
 }
 
+// Programmer errors throw: a param that can't fill the path, or a codec that throws. They're bugs in the
 // calling code, and nothing has been sent (like an invalid baseUrl, which makes Request throw).
 let paramValue = (values, name) =>
   switch values->Dict.get(name) {
@@ -55,10 +56,11 @@ let buildPath = (path, params: JSON.t) => {
   ->Array.join("/")
 }
 
-// A ReScript exception becomes a JS Error, so the rejected call always carries a message and a stack.
+// A ReScript exception, or a JS throw of something other than an Error, becomes a JS Error, so the
+// rejected call always carries a message and a stack.
 let encodeOrThrow = (encode, value) =>
   try encode(value) catch {
-  | JsExn(e) => JsExn.throw(e)
+  | JsExn(e) if e->JsExn.message->Option.isSome => JsExn.throw(e)
   | _ => JsError.throwWithMessage("Encoding failed")
   }
 

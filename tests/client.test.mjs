@@ -75,6 +75,11 @@ test("a codec that throws a ReScript exception still rejects with a JS Error", a
   await assert.rejects(Client.call(recording("https://x.dev").client, TestApi.rescriptThrowingParams, "x"), rejectsWith(/^Encoding failed$/));
 });
 
+test("a hand-written JS codec that throws a non-Error still rejects with a JS Error", async () => {
+  const throwsString = { ...TestApi.throwingParams, paramsCodec: { ...TestApi.throwingParams.paramsCodec, encode: () => { throw "bad"; } } };
+  await assert.rejects(Client.call(recording("https://x.dev").client, throwsString, "x"), rejectsWith(/^Encoding failed$/));
+});
+
 test("a fetch failure is Network", async () => {
   const { client } = recording("https://x.dev", () => { throw new TypeError("connection refused"); });
   assert.deepEqual(await Client.call(client, TestApi.getAccount, { id: "a1" }), {
