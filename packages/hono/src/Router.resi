@@ -3,7 +3,7 @@
 
 type t<'env>
 
-/** Handlers are always async: `async ctx => Fetch.Response.text("hi")`. */
+/** Handlers are always async: `async ctx => Fetch.Response.fromString("hi")`. */
 type handler<'env> = Context.t<'env> => promise<ResApi.Fetch.Response.t>
 
 type next = unit => promise<unit>

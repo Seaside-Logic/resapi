@@ -4,7 +4,7 @@ open Check
 
 let client = (status, body) =>
   Client.make(~baseUrl="https://api.test", ~fetch=async _request =>
-    Fetch.Response.text(body, ~init={status: status})
+    Fetch.Response.fromString(body, ~init={status: status})
   )
 
 let main = async () => {

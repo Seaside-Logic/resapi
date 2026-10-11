@@ -26,7 +26,7 @@ let poweredBy: Router.middleware<'env> = async (ctx, next) => {
 }
 
 let deny: Router.middleware<'env> = async (_ctx, _next) => Some(
-  Fetch.Response.text("denied", ~init={status: 403}),
+  Fetch.Response.fromString("denied", ~init={status: 403}),
 )
 
 let throwingMiddleware: Router.middleware<'env> = async (_ctx, _next) => throw(Failure("boom"))
@@ -43,14 +43,14 @@ let app: Router.t<unit> =
   ->Router.use(~path="/accounts/*", bearerAuth({token: "secret"}))
   ->Router.get("/ok", async _ctx => {
     events->Array.push("handler")
-    Fetch.Response.text("ok")
+    Fetch.Response.fromString("ok")
   })
   ->Router.get("/denied", async _ctx => {
     events->Array.push("handler")
-    Fetch.Response.text("should not run")
+    Fetch.Response.fromString("should not run")
   })
-  ->Router.get("/protected", async _ctx => Fetch.Response.text("secret"))
-  ->Router.get("/middleware-throws", async _ctx => Fetch.Response.text("should not run"))
+  ->Router.get("/protected", async _ctx => Fetch.Response.fromString("secret"))
+  ->Router.get("/middleware-throws", async _ctx => Fetch.Response.fromString("should not run"))
   ->Router.get("/uncaught-rescript", async _ctx => throw(Failure("boom")))
   ->Router.get("/uncaught-js", async _ctx => JsError.throwWithMessage("boom"))
   ->Router.get("/uncaught-typed", async _ctx => throw(Not_found))

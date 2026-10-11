@@ -8,7 +8,7 @@ let paramsJson = TestApi.getAccount.paramsCodec.encode({id: "acct_123"})
 let bodyJson = TestApi.createAccount.bodyCodec.encode({name: "n"})
 let app: Router.t<unit> =
   Router.make()
-  ->Router.get("/health", async _ctx => Fetch.Response.text("ok"))
+  ->Router.get("/health", async _ctx => Fetch.Response.fromString("ok"))
   ->Router.register(
     TestApi.createAccount->EndpointHandler.make(async (_ctx, {body}) => Ok({id: "new", name: body.name})),
   )

@@ -59,7 +59,7 @@ let accounts: dict<AccountApi.account> = dict{
 
 let app: Router.t<unit> =
   Router.make()
-  ->Router.get("/health", async _ctx => ResApi.Fetch.Response.text("ok"))
+  ->Router.get("/health", async _ctx => ResApi.Fetch.Response.fromString("ok"))
   ->Router.register(
     AccountApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch accounts->Dict.get(params.id) {

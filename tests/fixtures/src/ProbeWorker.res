@@ -5,5 +5,5 @@ open ResApiHono
 
 let default: Router.t<unit> = Router.make()->Router.get("/lazy-codec", async _ctx => {
   let codec = SuryCodec.make(S.string)
-  Fetch.Response.json(codec.encode("ok"))
+  Fetch.Response.jsonR(~data=codec.encode("ok"))
 })

@@ -65,7 +65,7 @@ type error<'e> =
 
 let make: (
   ~baseUrl: string,
-  ~fetch: Fetch.Request.t => promise<Fetch.Response.t>=?,
+  ~fetch: Fetch.Request.t => promise<Fetch.Response.t>=?,  // default: Fetch.fetchWithRequest
   ~headers: dict<string>=?,  // sent with every call
 ) => t
 
@@ -90,39 +90,51 @@ let callWithBody: (
 
 ### `Fetch`
 
-These are thin bindings to the Fetch API, used by the client and by handlers.
+A source-compatible subset of [`@rescript/webapi`](https://github.com/rescript-lang/experimental-rescript-webapi)'s Fetch bindings: the same module names, functions, labels and record fields, only fewer of them. When ReScript 13 and webapi are stable, `ResApi.Fetch` will become re-exports of webapi, and code written against it keeps compiling. Bind other libraries' Fetch functions against these types.
 
 ```rescript
-module AbortSignal: {
-  type t
-  let timeout: int => t  // aborts after the given milliseconds
-}
-
-module AbortController: {
-  type t
-  let make: unit => t
-  let signal: t => AbortSignal.t
-  let abort: t => unit
-}
-
 module Request: {
-  type t
-  type init = {method?: string, headers?: dict<string>, body?: string, signal?: AbortSignal.t}
-  let make: (string, ~init: init=?) => t
+  type t = private {method: string, url: string, headers: Headers.t, signal: AbortSignal.t, bodyUsed: bool}
+  type requestInit = {method?: string, headers?: HeadersInit.t, body?: Nullable.t<BodyInit.t>, signal?: Nullable.t<AbortSignal.t>}
+  let fromURL: (string, ~init: requestInit=?) => t
+  let json: t => promise<JSON.t>
+  let text: t => promise<string>
+  let clone: t => t
 }
 
 module Response: {
-  type t
-  type init = {status?: int, headers?: dict<string>}
-  let json: (JSON.t, ~init: init=?) => t
-  let text: (string, ~init: init=?) => t
-  let status: t => int
-  let ok: t => bool
-  let readText: t => promise<string>
-  let header: (t, string) => option<string>
-  let setHeader: (t, string, string) => t  // mutates; throws on immutable responses
+  type t = private {status: int, ok: bool, statusText: string, url: string, redirected: bool, headers: Headers.t, bodyUsed: bool}
+  type responseInit = {status?: int, statusText?: string, headers?: HeadersInit.t}
+  let fromString: (string, ~init: responseInit=?) => t
+  let fromNull: (~init: responseInit=?) => t
+  let jsonR: (~data: JSON.t, ~init: responseInit=?) => t   // Response.json(data, init)
+  let json: t => promise<JSON.t>                            // reads the body
+  let text: t => promise<string>                            // reads the body
+  let clone: t => t
 }
+
+module Headers: {
+  type t
+  let make: unit => t
+  let fromDict: dict<string> => t
+  let get: (t, string) => Null.t<string>
+  let has: (t, string) => bool
+  let set: (t, ~name: string, ~value: string) => unit
+  let append: (t, ~name: string, ~value: string) => unit
+  let delete: (t, string) => unit
+}
+
+module HeadersInit: { type t; let fromDict: dict<string> => t; let fromHeaders: Headers.t => t; let fromKeyValueArray: array<(string, string)> => t }
+module BodyInit: { type t; let fromString: string => t }
+
+module AbortSignal: { type t; let timeout: int => t; let abort: (~reason: JSON.t=?) => t; let any: array<t> => t }
+module AbortController: { type t = private {signal: AbortSignal.t}; let make: unit => t; let abort: (t, ~reason: JSON.t=?) => unit }
+
+let fetch: (string, ~init: Request.requestInit=?) => promise<Response.t>
+let fetchWithRequest: (Request.t, ~init: Request.requestInit=?) => promise<Response.t>
 ```
+
+For example, `Fetch.Response.jsonR(~data=json, ~init={status: 201})`, `response.status`, or `response.headers->Fetch.Headers.set(~name="x-powered-by", ~value="resAPI")`.
 
 ### `Dispatch` (unstable)
 

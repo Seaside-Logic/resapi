@@ -25,6 +25,6 @@ let make = (contract: Endpoint.t<_, _, _, _>, handler: handler<_, _, _, _, _>) =
       ~readBody=() => Text(ctx->Context.text),
       ~handle=input => handler(ctx, input),
     )
-    Fetch.Response.json(body, ~init={status: status})
+    Fetch.Response.jsonR(~data=body, ~init={status: status})
   },
 }

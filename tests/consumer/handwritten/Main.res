@@ -20,7 +20,7 @@ let accountCodec: Codec.t<account> = {
 let me = Endpoint.get("/me", ~params=Codec.unit, ~response=accountCodec)
 
 let client = body =>
-  Client.make(~baseUrl="https://api.test", ~fetch=async _request => Fetch.Response.text(body))
+  Client.make(~baseUrl="https://api.test", ~fetch=async _request => Fetch.Response.fromString(body))
 
 let main = async () => {
   let ok = await client(`{"id":"a1","name":"Ann"}`)->Client.call(me, ~params=())

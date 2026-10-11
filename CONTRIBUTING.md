@@ -28,7 +28,7 @@ Run `npm run release:check` before opening a pull request. It runs:
 
 - Each package's public API is its `.resi` files. Keep implementation helpers out of them.
 - Every new compile-time guarantee gets a case in `tests/compile-fail/cases/`, with the expected error in its `// expect:` line.
-- No unsafe casts (`Obj.magic`, `%identity`).
+- No unsafe casts (`Obj.magic`, `%identity`). The only exception is `ResApi.Fetch`, which mirrors `@rescript/webapi` exactly, including its `%identity` constructors for union-typed init values. Changes to `Fetch.res` must match webapi's names, labels, types and record fields.
 - Core must not import Hono, Express, Sury or any runtime-specific module, and no adapter depends on another.
 - After editing any `rescript.json`, run `npx rescript clean`.
 - Whole-file doc examples start with `// Name.res` and are compiled by `check:packages`. Keep them working.

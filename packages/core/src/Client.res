@@ -15,10 +15,13 @@ type error<'e> =
   | InvalidParams(string)
   | EncodeFailed(string)
 
-@val external globalFetch: Fetch.Request.t => promise<Fetch.Response.t> = "fetch"
 @val external encodeURIComponent: string => string = "encodeURIComponent"
 
-let make = (~baseUrl, ~fetch=globalFetch, ~headers=dict{}) => {baseUrl, fetch, headers}
+let make = (~baseUrl, ~fetch=request => Fetch.fetchWithRequest(request), ~headers=dict{}) => {
+  baseUrl,
+  fetch,
+  headers,
+}
 
 /** Appends the path to the base URL, keeping any path prefix in the base: `https://x.dev/api/` + `/a` is `https://x.dev/api/a`. */
 let joinUrl = (baseUrl, path) => {
@@ -91,7 +94,7 @@ let decodeFailure = (contract: Endpoint.t<_, _, _, _>, status, text) =>
 let fetchText = async (client, request) =>
   try {
     let response = await client.fetch(request)
-    Ok((response, await response->Fetch.Response.readText))
+    Ok((response, await response->Fetch.Response.text))
   } catch {
   | JsExn(e) =>
     switch e->JsExn.name {
@@ -111,19 +114,28 @@ let mergeHeaders = sources => {
 }
 
 let requestInit = (client, contract: Endpoint.t<_, _, _, _>, body, ~headers, ~signal): result<
-  Fetch.Request.init,
+  Fetch.Request.requestInit,
   _,
-> =>
+> => {
+  let signal = signal->Option.map(Nullable.make)
   switch contract.method {
-  | Get => Ok({method: "GET", headers: mergeHeaders([client.headers, headers]), ?signal})
+  | Get =>
+    Ok({
+      method: "GET",
+      headers: Fetch.HeadersInit.fromDict(mergeHeaders([client.headers, headers])),
+      ?signal,
+    })
   | Post =>
-    encodeWith(contract.bodyCodec.encode, body)->Result.map((json): Fetch.Request.init => {
+    encodeWith(contract.bodyCodec.encode, body)->Result.map((json): Fetch.Request.requestInit => {
       method: "POST",
-      headers: mergeHeaders([client.headers, dict{"content-type": "application/json"}, headers]),
-      body: json->JSON.stringify,
+      headers: Fetch.HeadersInit.fromDict(
+        mergeHeaders([client.headers, dict{"content-type": "application/json"}, headers]),
+      ),
+      body: Nullable.make(Fetch.BodyInit.fromString(json->JSON.stringify)),
       ?signal,
     })
   }
+}
 
 let send = async (
   client,
@@ -143,12 +155,10 @@ let send = async (
   | Error(e) => Error(e)
   | Ok((path, init)) =>
     // An invalid baseUrl makes Request throw: a configuration bug, not a request failure.
-    switch await fetchText(client, Fetch.Request.make(joinUrl(client.baseUrl, path), ~init)) {
+    switch await fetchText(client, Fetch.Request.fromURL(joinUrl(client.baseUrl, path), ~init)) {
     | Error(e) => Error(e)
     | Ok((response, text)) =>
-      response->Fetch.Response.ok
-        ? decodeResponse(contract, text)
-        : decodeFailure(contract, response->Fetch.Response.status, text)
+      response.ok ? decodeResponse(contract, text) : decodeFailure(contract, response.status, text)
     }
   }
 }

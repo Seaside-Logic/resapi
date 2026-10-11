@@ -34,4 +34,5 @@ Compile-fail cases live in `tests/compile-fail/cases/*.res`. Each one must fail 
 
 - Pin dependency versions exactly. Don't publish, push, or deploy.
 - No unsafe casts (`Obj.magic`, `%identity`) to reach a syntax target. Compile-time safety claims need a compile-fail case.
+- One exception: `packages/core/src/Fetch.res` mirrors `@rescript/webapi`, including its `%identity` constructors for JS union types (`HeadersInit`, `BodyInit`). Keep that module a strict subset of webapi: same names, labels, types and fields.
 - Compiled `*.res.mjs` is gitignored.

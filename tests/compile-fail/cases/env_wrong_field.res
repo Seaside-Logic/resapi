@@ -3,4 +3,4 @@
 open ResApi
 open ResApiHono
 type env = {apiSecret: string}
-let handler: Router.handler<env> = async ctx => Fetch.Response.text((ctx->Context.env).apiKey)
+let handler: Router.handler<env> = async ctx => Fetch.Response.fromString((ctx->Context.env).apiKey)

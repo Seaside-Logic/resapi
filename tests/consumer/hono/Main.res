@@ -38,10 +38,13 @@ let main = async () => {
   check(created == Ok({id: "new", name: "Bo"}), "typed POST")
 
   let bad = await app->Router.fetch(
-    Fetch.Request.make("http://app.test/accounts", ~init={method: "POST", body: `{"name":1}`}),
+    Fetch.Request.fromURL(
+      "http://app.test/accounts",
+      ~init={method: "POST", body: Nullable.make(Fetch.BodyInit.fromString(`{"name":1}`))},
+    ),
     (),
   )
-  check(bad->Fetch.Response.status == 400, "invalid body is a 400")
+  check(bad.status == 400, "invalid body is a 400")
   Console.log("ok - hono")
 }
 

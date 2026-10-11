@@ -10,13 +10,13 @@ let accounts = dict{
 let app: Router.t<unit> =
   Router.make()
   ->Router.get("/health", async _ctx =>
-    Fetch.Response.json(JSON.Encode.object(dict{"status": JSON.Encode.string("ok")}))
+    Fetch.Response.jsonR(~data=JSON.Encode.object(dict{"status": JSON.Encode.string("ok")}))
   )
   ->Router.get("/hello/:name", async ctx =>
-    Fetch.Response.text(`Hello, ${ctx->Context.param("name")}!`)
+    Fetch.Response.fromString(`Hello, ${ctx->Context.param("name")}!`)
   )
   ->Router.get("/throws", async _ctx => throw(Not_found))
-  ->Router.post("/echo", async ctx => Fetch.Response.text(await ctx->Context.text))
+  ->Router.post("/echo", async ctx => Fetch.Response.fromString(await ctx->Context.text))
   ->Router.register(
     TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch (params.id, accounts->Dict.get(params.id)) {

@@ -87,7 +87,7 @@ let accounts: dict<AccountApi.account> = dict{}
 
 let app: Router.t<unit> =
   Router.make()
-  ->Router.get("/health", async _ctx => Fetch.Response.text("ok"))
+  ->Router.get("/health", async _ctx => Fetch.Response.fromString("ok"))
   ->Router.register(
     AccountApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch accounts->Dict.get(params.id) {
@@ -205,7 +205,7 @@ let describeQuickly = id =>
 Use `Client.call` for contracts without a body and `Client.callWithBody` for POST. Passing the wrong params, a missing body or the wrong body type is a compile error.
 
 - **Headers:** `~headers` on a call, or `Client.make(~headers=...)` for every call. A per-call header overrides the client's, and both override resAPI's `content-type`. Names are case-insensitive.
-- **Cancellation:** `~signal` takes a Fetch `AbortSignal`, such as `Fetch.AbortSignal.timeout(ms)` or `Fetch.AbortController.signal(controller)`. An aborted call returns `Error(Aborted)`.
+- **Cancellation:** `~signal` takes a Fetch `AbortSignal`, such as `Fetch.AbortSignal.timeout(ms)` or `controller.signal` from a `Fetch.AbortController.make()`. An aborted call returns `Error(Aborted)`.
 
 The client module imports only the contract, so a bundle built from it contains no Hono code.
 

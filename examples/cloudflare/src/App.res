@@ -8,9 +8,9 @@ let app =
   ->Router.use(logger())
   ->Router.use(~path="/protected", Auth.bearer)
   ->Router.get("/health", async _ctx =>
-    Fetch.Response.json(JSON.Encode.object(dict{"status": JSON.Encode.string("ok")}))
+    Fetch.Response.jsonR(~data=JSON.Encode.object(dict{"status": JSON.Encode.string("ok")}))
   )
-  ->Router.get("/protected", async _ctx => Fetch.Response.text("secret"))
+  ->Router.get("/protected", async _ctx => Fetch.Response.fromString("secret"))
   ->Router.register(
     AccountApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch AccountStore.get(params.id) {
