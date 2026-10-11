@@ -16,11 +16,4 @@ type t
 
 let set = (req, key, value) => req->setField(ResApi.Key.name(key), value)
 let get = (req, key) => req->field(ResApi.Key.name(key))->Nullable.toOption
-let getOrThrow = (req, key) =>
-  switch req->get(key) {
-  | Some(value) => value
-  | None =>
-    JsError.throwWithMessage(
-      `No value for key "${ResApi.Key.name(key)}": is its middleware mounted for this path?`,
-    )
-  }
+let getOrThrow = (req, key) => req->get(key)->ResApi.Key.orThrow(key)

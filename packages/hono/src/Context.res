@@ -31,11 +31,4 @@ let request = ctx => ctx->req->reqRaw
 
 let set = (ctx, key, value) => ctx->honoSet(ResApi.Key.name(key), value)
 let get = (ctx, key) => ctx->honoGet(ResApi.Key.name(key))->Nullable.toOption
-let getOrThrow = (ctx, key) =>
-  switch ctx->get(key) {
-  | Some(value) => value
-  | None =>
-    JsError.throwWithMessage(
-      `No value for key "${ResApi.Key.name(key)}": is its middleware mounted for this path?`,
-    )
-  }
+let getOrThrow = (ctx, key) => ctx->get(key)->ResApi.Key.orThrow(key)

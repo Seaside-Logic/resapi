@@ -11,3 +11,7 @@ type t<'a>
 let make: string => t<'a>
 
 let name: t<'a> => string
+
+/** The value an adapter's `get` found, or a JS Error naming the key when there is none. It backs the
+    adapters' `getOrThrow`, so the message is the same on every adapter. */
+let orThrow: (option<'a>, t<'a>) => 'a

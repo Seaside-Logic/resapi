@@ -79,6 +79,7 @@ let assertValid: (string, Codec.t<'p>) => unit  // throws on Invalid
 type t<'a>
 let make: string => t<'a>   // annotate: let userKey: Key.t<User.t> = Key.make("user")
 let name: t<'a> => string
+let orThrow: (option<'a>, t<'a>) => 'a  // backs the adapters' getOrThrow
 ```
 
 A typed name for a value middleware stores on a request (`Context.set` on Hono, `Req.set` on Express) and handlers read back. The name is the framework's own, so keys also read values third-party middleware sets. The type is a declaration, not a proof. On Express the name is a property on `req`, so it mustn't be one of Express's own (see [the Express guide](express.md#middleware)).
