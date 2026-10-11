@@ -1,0 +1,17 @@
+# Update notifications only: every PR runs CI (compile, tests, Workers, package installs), and nothing
+# merges automatically. Versions are pinned exactly, so each bump is a deliberate, tested change.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      tooling:
+        patterns: ["rescript", "wrangler", "workerd", "@cloudflare/*"]
+      frameworks:
+        patterns: ["hono", "express", "sury", "sury-ppx"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
