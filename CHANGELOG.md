@@ -2,6 +2,39 @@
 
 All four packages (`@resapi/core`, `@resapi/hono`, `@resapi/express`, `@resapi/sury`) are released together with the same version.
 
+## Unreleased
+
+Not published. These changes come from a design phase that tested 0.1.0 against a real application (WealthJack) and a second, deliberately different Express service.
+
+### Breaking changes
+
+- **`Client.error`:** `InvalidParams` and `EncodeFailed` are gone, and there's a new `Unauthorized({status, reason})` case. A param that can't fill the path, or a codec that throws while encoding, now rejects the call with a JS `Error`, as an invalid `baseUrl` already did.
+- **401 and 403 responses** that aren't declared errors are `Unauthorized`, not `UnexpectedStatus`.
+- **`ResApi.Fetch` mirrors `@rescript/webapi`,** so code written against it keeps compiling when it becomes re-exports of webapi. The renames:
+  - `Response.text(string)` → `Response.fromString`
+  - `Response.json(json, ~init)` → `Response.jsonR(~data, ~init)`
+  - `Response.readText` → `Response.text`
+  - `Response.status`/`ok` → record fields
+  - `Response.header`/`setHeader` → `Headers.get` (returns `Null.t`) and `Headers.set(~name, ~value)` on `response.headers`
+  - `Request.make` → `Request.fromURL` (init: `headers: HeadersInit.t`, `body: Nullable.t<BodyInit.t>`)
+  - `AbortController.signal(c)` → `c.signal`
+
+### Added
+
+- **Auth as middleware:**
+  - `Reject.unauthenticated`/`forbidden` (both adapters) answer in a shape the client reads as `Unauthorized` with a reason.
+  - `ResApi.Key` with `Context.set/get/getOrThrow` (Hono) and `Req.set/get/getOrThrow` (Express) pass typed values, such as the signed-in user, from middleware to handlers.
+- **`Client.message`:** English defaults for every client error except declared errors.
+- **Codec combinators:**
+  - primitives: `string`, `int`, `float`, `bool`
+  - containers: `enum`, `array`, `option`, `refine`
+  - records: `object`/`field`
+- **Routing beside typed endpoints:**
+  - `Router.all` (both adapters)
+  - `Router.notFound` and `Context.request` (Hono)
+  - `Endpoint.any` with `Router.assertRegistered`, a test-time check that every contract is registered
+
+
 ## 0.1.0 (preview)
 
 The first public release. resAPI defines an HTTP endpoint once, as a contract, and uses it on both the server and the client, with compile-time checking and runtime validation.

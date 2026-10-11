@@ -39,6 +39,12 @@ Contracts depend on this record, not on a schema library. Sury is one implementa
 
 `SuryCodec.make` compiles Sury's decoder and encoder immediately. Cloudflare Workers forbid `new Function` once a request is running, so codecs must be built at module top level. `scripts/test-worker.sh` proves workerd enforces this: building a codec during a request returns 200 under Node and 500 under workerd.
 
+**Combinators.** `Codec` has a small combinator set (primitives, `enum`, `array`, `option`, `refine`, `object`/`field`). `object` decodes into a record literal: `field` signals a failure with an exception that `object` catches, so a field left out of the literal is a compile error, and nothing escapes. `enum` takes the values and their `toString`, so with `@as` variants and `(v :> string)` the wire names are written once and checked by the compiler.
+
+**Fetch types.** `ResApi.Fetch` is a strict subset of `@rescript/webapi`'s Fetch bindings: same names, labels and record fields. When ReScript 13 and webapi are stable, the module becomes re-exports and user code keeps compiling. Until then, bind other libraries' Fetch functions against `ResApi.Fetch` types. webapi binds union-typed init values (`HeadersInit`, `BodyInit`) with `%identity` constructors, and the mirror does the same. It's the one place resAPI allows them.
+
+**Wrapping policy.** The adapters wrap what typed endpoints need, plus the routing beside them (`Router.all`, and `Router.notFound` on Hono), and give typed access to the framework's request (`Context.request`). Anything else binds with one external against `Router.t`, which *is* the framework app. `Endpoint.any` erases a contract's types, so a list of every contract can be checked with `Router.assertRegistered` in a test.
+
 ## Contracts
 
 ```rescript
@@ -91,7 +97,18 @@ Any exception from a codec or handler is logged as the JS `Error` itself, so the
 - **Native handlers and middleware.** Plain routes take `(req, res) => promise<unit>`. Middleware is Express's `(req, res, next) => unit`, so `express.json()`, `express.static` and similar bind with a single external.
 - **Errors.** Express 5 passes a rejected handler promise to its error handler. As on Hono, `Router.get`/`post`/`use` rethrow raw ReScript exceptions as JS `Error`s, here so that Express's handler logs a stack instead of `[object Object]`. Express's default handler shows the stack in the response body unless `NODE_ENV=production`; that is Express's behaviour, and typed endpoints never reach it.
 - **Request bodies.** `Router.register` mounts POST endpoints behind `express.text({type: () => true})`, so `Dispatch` sees the raw body and reports `malformed_json` exactly as on Hono. If an upstream `express.json()` has already parsed the body, the parsed value is used.
+- **Body parsers and auth.** `register` mounts its body parser on each route, so `Router.use` middleware, including auth, runs before any body is read. An upstream body parser mounted globally answers its own failures before your auth middleware, which is why the guide says not to.
+
 Usage details (body parsers and size limits, content types, request-scoped values, supported versions) are in the [Express guide](express.md).
+
+## Auth is middleware
+
+resAPI doesn't model auth in contracts. Hono and Express already protect paths with middleware (`app.use("/api/*", bearerAuth({token}))`), and that runs before resAPI's pipeline, so it checks auth before params and body, and protects everything under a prefix by default. resAPI adds two small helpers:
+
+- **`Reject`** answers 401/403 in the framework error shape, so the client can tell an auth rejection (`Unauthorized`, with a reason) from other failures. The client classifies any 401/403 that isn't a declared error as `Unauthorized`, so third-party middleware works too, just without a reason.
+- **`Key`** gives a request value a type. It's stored and read under the framework's own name (`c.set`/`c.get`, or a property on `req`), so it also reads what third-party middleware sets. The type is a declaration, like any binding.
+
+**Considered and dropped: declared guards.** A guard declaration in each contract, an implementation per server, and a separate client error case. It made forgetting auth a compile error, and gave typed auth errors per app. Measured on WealthJack, it added four concepts, a fifth type parameter on `Endpoint.t` and about 25 lines, while protection by path already gives the default-protected behaviour apps expect. The trade made here: the compiler no longer checks per endpoint that auth is wired up, and auth failures are one built-in type (`Unauthorized({status, reason})`) rather than an app-defined one.
 
 ## Typed application errors
 
@@ -111,12 +128,13 @@ Error categories stay distinct on the client:
 | Variant | Meaning |
 | --- | --- |
 | `Application({status, error})` | A declared error, decoded and typed |
+| `Unauthorized({status, reason})` | A 401/403 that isn't a declared error, from any middleware |
 | `Network(message)` | `fetch` itself failed |
 | `Aborted` | The call's `~signal` aborted or timed out |
 | `UnexpectedStatus({status, body})` | Non-2xx without a declared error: framework errors, proxies, 500s |
 | `InvalidResponse(Codec.error)` | The body broke the contract: bad JSON, a failed decode, or a malformed application error |
-| `InvalidParams(message)` | A path param is missing or not a scalar. Usually caught earlier by route checking |
-| `EncodeFailed(message)` | A codec threw while encoding the request |
+
+Bugs in the calling code (a param that can't fill the path, a codec that throws, an invalid `baseUrl`) throw instead of returning an error.
 
 ## Client
 

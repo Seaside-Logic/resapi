@@ -17,6 +17,7 @@ resAPI works with [Hono](https://hono.dev) (including Cloudflare Workers) and [E
 - **Runtime validation at both boundaries.** The server decodes params and bodies before your handler runs. The client decodes responses before you see them, with no casts.
 - **Compile-time checking.** Wrong param fields, wrong body types, wrong handler results and undeclared errors are compile errors.
 - **Typed application errors.** An endpoint declares its expected failures (`NotFound`, `AccessDenied`) and their HTTP statuses. They stay separate from network, validation and server errors.
+- **Auth is just middleware.** Protect paths with Hono or Express middleware as usual. resAPI's `Reject` and typed keys make the rejection and the signed-in user typed on both ends.
 - **Runtime independence.** Contracts and the client depend only on Fetch. Server adapters exist for Hono (runs on Cloudflare Workers with no JS glue) and Express (Node).
 
 ## Example
