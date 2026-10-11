@@ -34,10 +34,14 @@ type t<'params, 'body, 'response, 'error> = private {  // readable, but built on
 let get: (string, ~params: Codec.t<'p>, ~response: Codec.t<'r>) => t<'p, unit, 'r, noError>
 let post: (string, ~params: Codec.t<'p>, ~body: Codec.t<'b>, ~response: Codec.t<'r>) => t<'p, 'b, 'r, noError>
 let withErrors: (t<'p, 'b, 'r, noError>, Codec.t<'e>, ~status: 'e => int) => t<'p, 'b, 'r, 'e>
+
+type any = private {method: method, path: string}  // a contract with its types erased
+let any: t<'p, 'b, 'r, 'e> => any
 ```
 
 - **Route checking:** `get` and `post` throw if the route's `:params` don't match the params codec (see `RouteCheck`). Define contracts at module top level, so a mismatch fails at load.
 - **`withErrors`:** declares the endpoint's application errors. `~status` must return 400–599.
+- **`any`:** erases a contract's types so different contracts fit in one list. Keep one list of every contract and call the adapter's `Router.assertRegistered(router, list)` in a test, so a forgotten `register` fails the test instead of answering 404.
 
 ### `RouteCheck`
 
@@ -168,6 +172,9 @@ let get: (t<'env>, string, handler<'env>) => t<'env>
 let post: (t<'env>, string, handler<'env>) => t<'env>
 let use: (t<'env>, ~path: string=?, middleware<'env>) => t<'env>
 let register: (t<'env>, EndpointHandler.route<'env>) => t<'env>
+let all: (t<'env>, string, handler<'env>) => t<'env>       // every HTTP method
+let notFound: (t<'env>, handler<'env>) => t<'env>         // unmatched requests
+let assertRegistered: (t<'env>, array<Endpoint.any>) => unit  // for tests
 let fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t>
 ```
 
@@ -191,6 +198,7 @@ let method: t<'env> => string
 let path: t<'env> => string
 let res: t<'env> => Fetch.Response.t          // response so far, in middleware after next()
 let setHeader: (t<'env>, string, string) => unit  // response header (Hono's c.header)
+let request: t<'env> => Fetch.Request.t          // the original request (c.req.raw)
 ```
 
 ### `EndpointHandler`
@@ -224,6 +232,8 @@ let get: (t, string, handler) => t
 let post: (t, string, handler) => t
 let use: (t, ~path: string=?, middleware) => t
 let register: (t, EndpointHandler.route) => t
+let all: (t, string, handler) => t                // every HTTP method
+let assertRegistered: (t, array<Endpoint.any>) => unit  // for tests
 let listen: (t, int, unit => unit) => server  // port 0 picks a free port
 let close: server => unit
 ```

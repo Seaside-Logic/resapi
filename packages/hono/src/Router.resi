@@ -23,6 +23,17 @@ let use: (t<'env>, ~path: string=?, middleware<'env>) => t<'env>
 
 let register: (t<'env>, EndpointHandler.route<'env>) => t<'env>
 
+/** A plain route for every HTTP method, e.g. to hand a path prefix to another library. */
+let all: (t<'env>, string, handler<'env>) => t<'env>
+
+/** The response for requests no route matched (Hono's `app.notFound`). */
+let notFound: (t<'env>, handler<'env>) => t<'env>
+
+/** For tests: throws, naming each endpoint in the list that has no registered route. Keep one list of
+    every contract (`[HouseholdApi.endpoint->Endpoint.any, ...]`) so a forgotten `register` fails a test
+    instead of answering 404. */
+let assertRegistered: (t<'env>, array<ResApi.Endpoint.any>) => unit
+
 /** Fetch API entry point, for in-process calls and tests. */
 @send
 external fetch: (t<'env>, ResApi.Fetch.Request.t, 'env) => promise<ResApi.Fetch.Response.t> =

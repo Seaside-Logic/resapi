@@ -30,3 +30,10 @@ let use: (t, ~path: string=?, middleware) => t
 
 /** POST endpoints get a raw-text body parser (100kb limit). A body already parsed upstream is used as is. */
 let register: (t, EndpointHandler.route) => t
+
+/** A plain route for every HTTP method. For unmatched requests, add a last `use` (Express has no
+    separate not-found handler). */
+let all: (t, string, handler) => t
+
+/** For tests: throws, naming each endpoint in the list that wasn't mounted with `register`. */
+let assertRegistered: (t, array<ResApi.Endpoint.any>) => unit

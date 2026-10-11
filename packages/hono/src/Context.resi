@@ -22,3 +22,6 @@ let text: t<'env> => promise<string>
 let header: (t<'env>, string) => option<string>
 let method: t<'env> => string
 let path: t<'env> => string
+
+/** The original Fetch Request (Hono's `c.req.raw`), for libraries that work on Fetch requests. */
+let request: t<'env> => ResApi.Fetch.Request.t

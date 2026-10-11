@@ -32,3 +32,12 @@ let post: (
 
 /** Declares the endpoint's application errors and the HTTP status (4xx or 5xx) each one is sent with. */
 let withErrors: (t<'p, 'b, 'r, noError>, Codec.t<'e>, ~status: 'e => int) => t<'p, 'b, 'r, 'e>
+
+/** A contract with its types erased: just the route. Lets contracts of different types share a list,
+    e.g. for an adapter's `assertRegistered`. */
+type any = private {method: method, path: string}
+
+let any: t<'p, 'b, 'r, 'e> => any
+
+/** `"GET"` or `"POST"`. */
+let methodName: method => string

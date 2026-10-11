@@ -16,6 +16,7 @@ type server
 @module("express") external text: {"type": string => bool} => middleware = "text"
 @send external expressGet: (t, string, handler) => unit = "get"
 @send external expressPost: (t, string, handler) => unit = "post"
+@send external expressAll: (t, string, handler) => unit = "all"
 @send external expressPostWith: (t, string, middleware, handler) => unit = "post"
 @send external expressUse: (t, middleware) => unit = "use"
 @send external expressUseAt: (t, string, middleware) => unit = "use"
@@ -50,6 +51,11 @@ let post = (router, path, handler) => {
   router
 }
 
+let all = (router, path, handler) => {
+  router->expressAll(path, guard(handler))
+  router
+}
+
 let use = (router, ~path=?, middleware: middleware) => {
   let guarded = (req, res, next) =>
     try middleware(req, res, next) catch {
@@ -66,10 +72,28 @@ let use = (router, ~path=?, middleware: middleware) => {
 // upstream parser already read.
 let rawText = text({"type": _ => true})
 
+// Express has no public route list, so `register` records what it mounted, for assertRegistered.
+let registered: WeakMap.t<t, array<string>> = WeakMap.make()
+
+let routeName = (method, path) => `${ResApi.Endpoint.methodName(method)} ${path}`
+
 let register = (router, route: EndpointHandler.route) => {
+  let names = registered->WeakMap.get(router)->Option.getOr([])
+  registered->WeakMap.set(router, [...names, routeName(route.method, route.path)])->ignore
   switch route.method {
   | Get => router->expressGet(route.path, route.run)
   | Post => router->expressPostWith(route.path, rawText, route.run)
   }
   router
+}
+
+let assertRegistered = (router, endpoints: array<ResApi.Endpoint.any>) => {
+  let names = registered->WeakMap.get(router)->Option.getOr([])
+  let missing =
+    endpoints
+    ->Array.map(endpoint => routeName(endpoint.method, endpoint.path))
+    ->Array.filter(name => !(names->Array.includes(name)))
+  if missing != [] {
+    JsError.throwWithMessage(`Endpoints without a route: ${missing->Array.join(", ")}`)
+  }
 }

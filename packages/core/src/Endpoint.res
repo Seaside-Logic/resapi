@@ -53,3 +53,13 @@ let withErrors = (contract: t<'p, 'b, 'r, noError>, errorCodec: Codec.t<'e>, ~st
   errorCodec,
   errorStatus: status,
 }
+
+type any = {method: method, path: string}
+
+let any = (contract: t<_, _, _, _>) => {method: contract.method, path: contract.path}
+
+let methodName = method =>
+  switch method {
+  | Get => "GET"
+  | Post => "POST"
+  }

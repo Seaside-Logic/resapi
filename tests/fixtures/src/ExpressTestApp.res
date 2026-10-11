@@ -71,3 +71,8 @@ let guardedApp =
       name: req->user,
     })),
   )
+
+let routingApp =
+  Router.make()
+  ->Router.all("/proxy/{*rest}", async (req, res) => res->Res.send(req->Req.method))
+  ->Router.register(createAccount)

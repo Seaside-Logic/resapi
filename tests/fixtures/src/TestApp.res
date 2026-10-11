@@ -52,3 +52,20 @@ let app: Router.t<unit> =
   )
   // The handler rejects with a raw ReScript exception, not a JS Error.
   ->Router.register(TestApi.getMember->EndpointHandler.make(async (_ctx, _) => throw(Not_found)))
+
+// Routing beside typed endpoints: a route for every method, the raw request, and a JSON not-found.
+let routingApp: Router.t<unit> =
+  Router.make()
+  ->Router.all("/proxy/*", async ctx => {
+    let request = ctx->Context.request
+    Fetch.Response.fromString(`${request.method} ${request.url}`)
+  })
+  ->Router.register(
+    TestApi.getAccount->EndpointHandler.make(async (_ctx, _) => Ok({id: "a1", name: "Ann"})),
+  )
+  ->Router.notFound(async _ctx =>
+    Fetch.Response.jsonR(
+      ~data=JSON.Encode.object(dict{"error": JSON.Encode.string("not_found")}),
+      ~init={status: 404},
+    )
+  )

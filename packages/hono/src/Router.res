@@ -15,6 +15,11 @@ type middleware<'env> = (Context.t<'env>, next) => promise<option<Fetch.Response
 @send external honoPost: (t<'env>, string, handler<'env>) => t<'env> = "post"
 @send external honoUse: (t<'env>, middleware<'env>) => t<'env> = "use"
 @send external honoUseAt: (t<'env>, string, middleware<'env>) => t<'env> = "use"
+@send external honoAll: (t<'env>, string, handler<'env>) => t<'env> = "all"
+@send external honoNotFound: (t<'env>, handler<'env>) => t<'env> = "notFound"
+
+type honoRoute = {method: string, path: string}
+@get external routes: t<'env> => array<honoRoute> = "routes"
 
 @send external fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t> = "fetch"
 
@@ -38,6 +43,8 @@ let guard = (handler: handler<'env>): handler<'env> =>
 
 let get = (router, path, handler) => router->honoGet(path, guard(handler))
 let post = (router, path, handler) => router->honoPost(path, guard(handler))
+let all = (router, path, handler) => router->honoAll(path, guard(handler))
+let notFound = (router, handler) => router->honoNotFound(guard(handler))
 
 let use = (router, ~path=?, middleware: middleware<'env>) => {
   let guarded = async (ctx, next) =>
@@ -55,3 +62,19 @@ let register = (router, route: EndpointHandler.route<'env>) =>
   | Get => router->honoGet(route.path, route.run)
   | Post => router->honoPost(route.path, route.run)
   }
+
+let assertRegistered = (router, endpoints: array<Endpoint.any>) => {
+  let routes = router->routes
+  let missing =
+    endpoints->Array.filter(endpoint =>
+      !(
+        routes->Array.some(route =>
+          route.path == endpoint.path && route.method == Endpoint.methodName(endpoint.method)
+        )
+      )
+    )
+  if missing != [] {
+    let names = missing->Array.map(e => `${Endpoint.methodName(e.method)} ${e.path}`)
+    JsError.throwWithMessage(`Endpoints without a route: ${names->Array.join(", ")}`)
+  }
+}
