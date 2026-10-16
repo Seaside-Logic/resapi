@@ -1,54 +1,54 @@
 # Errors
 
-resAPI keeps four kinds of failure apart: invalid requests, declared application errors, unexpected server failures, and failures on the client's side of the call. Each has its own status, wire format and client variant. Mistakes in your own code against a contract are caught earlier, as [type errors](#reading-type-errors).
+resAPI distinguishes between invalid requests, declared application errors, unexpected server failures, and client failures. The sections below explain how each is reported over HTTP and to the typed client. The compiler catches many contract mismatches before a request is sent; see [Reading type errors](#reading-type-errors).
 
 ## On the server
 
-A typed endpoint (`Router.register`) handles a request in this order. The first failure answers it.
+A typed endpoint added with `Router.register` processes a request in the following order. If a step fails, resAPI sends the corresponding response and stops processing.
 
 | Step | Failure | Response |
 | --- | --- | --- |
-| 1. Decode path params (the body is not read yet) | Codec rejects them | 400 `invalid_params` |
-| 2. Read the body (POST) | Stream error, aborted request | 500 `internal` |
-| 3. Parse the body as JSON | Not valid JSON, or empty | 400 `malformed_json` |
-| 4. Decode the body | Codec rejects it | 400 `invalid_body` |
-| 5. Run the handler | `Error(e)`, a declared error | `errorStatus(e)` with `{"applicationError": ...}` |
-| | An exception, or a rejected promise | 500 `internal` |
-| 6. Encode the result | A codec throws, or `errorStatus` isn't 400–599 | 500 `internal` |
+| 1. Decode path parameters before reading the body | The parameter codec rejects the values | 400 `invalid_params` |
+| 2. Read the POST body | The body stream fails or the request is aborted | 500 `internal` |
+| 3. Parse the body as JSON | The body is empty or contains invalid JSON | 400 `malformed_json` |
+| 4. Decode the body | The body codec rejects the value | 400 `invalid_body` |
+| 5. Run the handler | The handler returns a declared error with `Error(e)` | `errorStatus(e)` with `{"applicationError": ...}` |
+| | The handler throws or its promise rejects | 500 `internal` |
+| 6. Encode the result | A codec throws or `errorStatus` returns a status outside 400–599 | 500 `internal` |
 
-**Auth middleware runs first.** Middleware mounted with `Router.use` runs before resAPI's pipeline, so an auth rejection (`Reject`, or any middleware's own 401/403) comes before params and body are checked.
+**Auth middleware runs first.** Register auth middleware with `Router.use` before your typed endpoints. It can reject the request with `Reject` or its own 401/403 response before resAPI checks the path parameters or body.
 
-Validation errors and internal errors share one body format:
+Validation errors and internal errors use the same response structure:
 
 ```json
 {"error": {"kind": "invalid_body", "message": "Expected string", "path": ["name"]}}
 ```
 
-`path` names the field that failed, as in `["owner", "name"]` or `["tags", "1"]`. It is `[]` when the failure isn't about one field.
+`path` identifies the field that failed, for example `["owner", "name"]` or `["tags", "1"]`. An empty path (`[]`) means the failure isn't tied to a specific field.
 
-A declared application error is sent with the status its contract maps it to, and its encoded value:
+For a declared application error, resAPI uses the status defined in the contract and sends the encoded error value:
 
 ```json
 {"applicationError": "not_found"}
 ```
 
-The two keys can't be confused, so a client always knows whether a failure was declared.
+The separate `error` and `applicationError` keys let the client distinguish declared application errors from other failures.
 
 ### Unexpected exceptions
 
-resAPI handles every exception inside a typed endpoint itself:
+resAPI catches exceptions raised while processing a typed endpoint:
 
-- The exception is logged with `console.error`, as the JS `Error` when there is one, so the stack trace survives.
-- The caller gets `500 {"error": {"kind": "internal", "message": "Internal Server Error", "path": []}}`, which reveals no detail.
-- The exception does **not** reach Hono's `onError` or Express's error middleware. Behaviour is therefore the same on both adapters.
+- The exception is logged with `console.error`. If it is a JavaScript `Error`, the original error object is logged to preserve its stack trace.
+- The caller receives `500 {"error": {"kind": "internal", "message": "Internal Server Error", "path": []}}`, without the exception details.
+- The exception does **not** reach Hono's `onError` or Express's error middleware. Both adapters handle it the same way.
 
-Plain routes (`Router.get`/`post`/`use`) and middleware keep their framework's own error handling: Hono's `onError` or Express's error middleware. resAPI only rethrows raw ReScript exceptions as JS `Error`s, so that Hono handles them at all and Express logs a stack. JS errors, including Hono's `HTTPException`, pass through untouched. Both frameworks' defaults log the error and answer with a plain 500. Express's default handler puts the stack in the response body unless `NODE_ENV=production`.
+Plain routes (`Router.get`/`post`) and middleware (`Router.use`) use the framework's error handling: Hono's `onError` or Express's error middleware. resAPI converts raw ReScript exceptions to JavaScript `Error` objects so Hono can handle them and Express can log a stack trace. Existing JavaScript errors, including Hono's `HTTPException`, pass through unchanged. By default, both frameworks log unhandled errors and return HTTP 500. Express also includes the stack trace in the response unless `NODE_ENV=production`.
 
-On Express, body-parser failures happen before resAPI runs and come back in Express's format: a body over the size limit (413), an unsupported charset (415), or malformed JSON rejected by an upstream `express.json()` (400). See [Request bodies](request-bodies.md).
+On Express, body-parser failures occur before resAPI processes the request, so Express determines their response format. Examples include a body that exceeds the size limit (413), an unsupported charset (415), and malformed JSON rejected by an upstream `express.json()` parser (400). See [Request bodies](request-bodies.md).
 
 ### Content type
 
-A typed POST accepts any content type, as long as the body is valid JSON. resAPI never answers 415. See [Request bodies](request-bodies.md).
+A typed POST accepts any content type as long as the body is valid JSON. resAPI itself never returns HTTP 415. See [Request bodies](request-bodies.md).
 
 ## On the client
 
@@ -56,22 +56,22 @@ A typed POST accepts any content type, as long as the body is valid JSON. resAPI
 
 | Variant | When |
 | --- | --- |
-| `Application({status, error})` | The server sent a declared error, and it decoded with the contract's error codec |
-| `Unauthorized({status, reason})` | A 401 or 403 that isn't a declared error, from any middleware. `reason` is set when the body is a resAPI `Reject` with a message |
-| `UnexpectedStatus({status, body})` | Any other non-2xx response: resAPI's own 400s and 500s, framework errors, proxies. `body` is the raw text |
-| `InvalidResponse({path, message})` | The response broke the contract: a 2xx body that isn't JSON or fails the response codec, an `applicationError` that fails the error codec, or an `applicationError` from an endpoint that declares none |
-| `Network(message)` | `fetch` itself failed: DNS, connection refused, CORS |
-| `Aborted` | The call's `~signal` aborted or timed out |
+| `Application({status, error})` | The server sent a declared error that decoded with the contract's error codec |
+| `Unauthorized({status, reason})` | A 401 or 403 response that is not a declared application error. `reason` is set when the body is a resAPI `Reject` response with a message |
+| `UnexpectedStatus({status, body})` | Any other non-2xx response, including resAPI's 400s and 500s, framework errors, and proxy failures. `body` contains the raw response text |
+| `InvalidResponse({path, message})` | The response violates the contract: a 2xx body is invalid JSON or fails the response codec, an `applicationError` fails the error codec, or the endpoint returns an `applicationError` without declaring errors |
+| `Network(message)` | The `fetch` call failed, for example because of DNS, a refused connection, or CORS |
+| `Aborted` | The call's `~signal` was aborted or timed out |
 
-**Programmer errors throw.** An invalid `baseUrl`, a missing or non-scalar path param, or a codec that throws while encoding makes the call reject with a JS `Error`. They're bugs in the calling code, and nothing was sent.
+**Bugs in the calling code reject the promise.** An invalid `baseUrl`, a missing or non-scalar path parameter, or a codec that throws during encoding causes the call to reject with a JavaScript `Error`. In these cases, no request is sent.
 
 ### How a failed response is classified
 
-1. A body with `"applicationError"` is the contract's declared error, at any status, including 401 and 403. If it doesn't decode, or the endpoint declares no errors, it's `InvalidResponse`.
-2. Otherwise, a 401 or 403 is `Unauthorized`. `reason` is `Some(message)` when the body is resAPI's rejection shape (`kind` `"unauthenticated"` or `"forbidden"`, from `Reject`) with a non-empty message. Otherwise it's `None`, for plain text, HTML or any other JSON.
-3. Anything else non-2xx is `UnexpectedStatus`.
+1. A body containing `"applicationError"` is treated as a declared application error, regardless of status, including 401 and 403. If it fails to decode, or the endpoint declares no errors, the result is `InvalidResponse`.
+2. Any other 401 or 403 becomes `Unauthorized`. If the body has the rejection format produced by `Reject`, with kind `"unauthenticated"` or `"forbidden"` and a non-empty message, `reason` is `Some(message)`. For plain text, HTML, or other JSON, it is `None`.
+3. Any remaining non-2xx response becomes `UnexpectedStatus`.
 
-A typical match handles the cases the caller cares about, then falls back to `Client.message`:
+Handle the errors that need specific behavior, then use `Client.message` as a fallback:
 
 ```rescript
 switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
@@ -84,7 +84,7 @@ switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
 
 ## Reading type errors
 
-resAPI's checks are type errors, and ReScript prints the full types involved, so some messages are long. Look for the pair "This has type … But it's expected to have type …": it names what you wrote and what the contract requires. With long generic types, the final "The incompatible parts" lines name just the difference. For example, a handler for `getAccount` that returns `Ok("a1")` reports:
+ReScript reports contract mismatches as type errors. These messages can be long because they include the full types. Look for "This has type … But it's expected to have type …" to compare the value you supplied with the type the contract requires. For long generic types, the final "The incompatible parts" lines isolate the difference. For example, a `getAccount` handler that returns `Ok("a1")` produces:
 
 ```text
 This has type: string

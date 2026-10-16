@@ -1,16 +1,16 @@
 # Routing beside typed endpoints
 
-Typed endpoints share a router with plain routes, other libraries and a not-found handler. This page covers those, and a check that every contract is mounted.
+You can use the same router for typed endpoints, plain routes, and other libraries. This page explains how to combine them, handle unmatched requests, and check that every contract has been registered.
 
-- **`Router.all(path, handler)`** is a plain route for every HTTP method. It's how you hand a prefix to another library, for example `Router.all("/api/auth/*", ...)` for Better Auth.
-- **`Router.assertRegistered(router, endpoints)`** throws, naming each listed contract that wasn't mounted with `register`. Keep a list of every contract (`[AccountApi.getAccount->Endpoint.any, ...]`) and call it in a test, so a forgotten `register` fails the test instead of answering 404.
+- **`Router.all(path, handler)`** adds a plain route for every HTTP method. Use it to pass requests under a path prefix to another library, for example `Router.all("/api/auth/*", ...)` for Better Auth.
+- **`Router.assertRegistered(router, endpoints)`** checks that every contract in the list was added with `register`. It throws an exception naming any missing contracts. Keep a list of your contracts (`[AccountApi.getAccount->Endpoint.any, ...]`) and check it in a test to catch missing registrations before they cause unexpected 404 responses.
 
 <div data-framework="hono">
 
 <p class="framework-label"><strong>Hono</strong></p>
 
-- **`Context.request`** is the original Fetch `Request` (`c.req.raw`), for libraries that take one: `auth->BetterAuth.handler(ctx->Context.request)`. Bind such libraries against `ResApi.Fetch` types.
-- **`Router.notFound(handler)`** answers unmatched requests. Without it, Hono answers a plain-text 404:
+- **`Context.request`** gives you the original Fetch `Request` (`c.req.raw`). Pass it to libraries that accept a Fetch request, as in `auth->BetterAuth.handler(ctx->Context.request)`. Use `ResApi.Fetch` types when writing bindings for these libraries.
+- **`Router.notFound(handler)`** handles requests that match no route. By default, Hono returns a plain-text 404. You can replace it with a custom response:
 
 ```rescript
 let app: Router.t<unit> =
@@ -28,6 +28,6 @@ let app: Router.t<unit> =
 
 <p class="framework-label"><strong>Express</strong></p>
 
-- **Unmatched requests:** add a last `Router.use` that answers them. Express has no separate not-found handler.
+- **Unmatched requests:** add a `Router.use` handler after all your routes to respond to requests that reach the end. Express has no separate not-found handler.
 
 </div>

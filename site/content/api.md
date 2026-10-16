@@ -1,6 +1,6 @@
 # API reference
 
-This page lists the public API, which each package's `.resi` files enforce.
+This page describes the public API defined by each package's `.resi` interface files.
 
 ## `@resapi/core` (namespace `ResApi`)
 
@@ -25,14 +25,14 @@ let field: (fields, string, t<'a>) => 'a
 let object: (~decode: fields => 'a, ~encode: 'a => array<(string, JSON.t)>) => t<'a>
 ```
 
-- **`object`:** decode by building the record literal from `field`s, so a field left out is a compile error. Encode by listing every field.
-- **Missing fields:** a missing field decodes as `null`. An `option` field becomes `None`, and any other fails with "Missing field". `None` encodes as `null`.
-- **`enum`:** with `@as` variants, `~toString=v => (v :> string)` keeps the wire names in the type, and the compiler checks the coercion. List every value in `~values`.
-- **Messages:** the built-in messages are generic ("Expected boolean"). Use `refine` for your own.
-- **Where to refine:** refine a field's codec, not a whole record's, so errors keep the field's path.
-- Any `Codec.t` works, including a hand-written one or `SuryCodec.make(...)`.
+- **`object`:** build a record literal with `field` calls in the decoder. The compiler catches missing record fields. In the encoder, list each field and its encoded value.
+- **Missing fields:** a missing field is passed to its codec as `null`. An `option` field decodes to `None`; other fields fail with "Missing field". `None` encodes as `null`.
+- **`enum`:** for `@as` variants, use `~toString=v => (v :> string)` to reuse the JSON names defined in the type. The compiler checks the coercion. Include every value in `~values`.
+- **Messages:** built-in codecs return generic messages, such as "Expected boolean". Use `refine` to provide a custom message.
+- **Where to refine:** apply `refine` to individual field codecs to preserve the field path in errors.
+- Contracts accept any `Codec.t`, whether written by hand or created with `SuryCodec.make(...)`.
 
-Use `Codec.unit` as `~params` for routes without path params. A codec's `path` names the field that failed, as in `["owner", "name"]` or `["tags", "1"]`.
+Use `Codec.unit` as `~params` for routes without path parameters. In a decode error, `path` identifies the field that failed, for example `["owner", "name"]` or `["tags", "1"]`.
 
 ### `Endpoint`
 
@@ -58,9 +58,9 @@ type any = private {method: method, path: string}  // a contract with its types 
 let any: t<'p, 'b, 'r, 'e> => any
 ```
 
-- **Route checking:** `get` and `post` throw if the route's `:params` don't match the params codec (see `RouteCheck`). Define contracts at module top level, so a mismatch fails at load.
-- **`withErrors`:** declares the endpoint's application errors. `~status` must return 400–599.
-- **`any`:** erases a contract's types so different contracts fit in one list. Keep one list of every contract and call the adapter's `Router.assertRegistered(router, list)` in a test, so a forgotten `register` fails the test instead of answering 404.
+- **Route checking:** `get` and `post` check that the route parameter names match the parameter codec and throw if they detect a mismatch. See `RouteCheck` for details and limitations. Define contracts at module top level so a mismatch prevents the module from loading.
+- **`withErrors`:** declares the endpoint's application error type and maps each error to a status. `~status` must return a value from 400 to 599.
+- **`any`:** erases the contract's type parameters so contracts with different types can share a list. Pass a list of all your contracts to the adapter's `Router.assertRegistered(router, list)` in a test to catch missing registrations before they cause unexpected 404 responses.
 
 ### `RouteCheck`
 
@@ -71,7 +71,7 @@ let check: (string, Codec.t<'p>) => outcome
 let assertValid: (string, Codec.t<'p>) => unit  // throws on Invalid
 ```
 
-`Endpoint.get` and `post` call `assertValid`. `check` is public so tests can assert on the outcome. A `CannotValidate` result means a codec rejected the probe value at a real route param, for example because it refines strings. See the [architecture document](architecture.md#route-checking-at-construction) for the probe and its limits.
+`Endpoint.get` and `Endpoint.post` call `assertValid` when creating a contract. Tests can call `check` to inspect the result directly. `CannotValidate` means the codec rejected the sample value for an existing route parameter, for example because it requires a specific string format. The [architecture document](architecture.md#route-checking-at-construction) explains how this check works and its limitations.
 
 ### `Key`
 
@@ -82,7 +82,7 @@ let name: t<'a> => string
 let orThrow: (option<'a>, t<'a>) => 'a  // backs the adapters' getOrThrow
 ```
 
-A typed name for a value middleware stores on a request (`Context.set` on Hono, `Req.set` on Express) and handlers read back. The name is the framework's own, so keys also read values third-party middleware sets. The type is a declaration, not a proof. On Express the name is a property on `req`, so it mustn't be one of Express's own (see [Middleware and auth](middleware.md)).
+A key gives a stored request value a name and type. Middleware writes the value with `Context.set` on Hono or `Req.set` on Express, and handlers read it using the same key. Keys use the framework's native storage, so they can also read values set by third-party middleware. The type is a declaration and isn't checked at runtime. On Express, the key name is a property on `req` and must not conflict with Express's own fields. See [Middleware and auth](middleware.md).
 
 ### `Client`
 
@@ -114,20 +114,20 @@ let callWithBody: (
 let message: (error<'e>, ~declared: 'e => string) => string
 ```
 
-- **`make`:** `~fetch` defaults to the global `fetch`.
-- **Headers:** per-call `~headers` override the client's, and both override resAPI's `content-type`. Names are case-insensitive.
-- **`~signal`:** a Fetch `AbortSignal`. Aborting it, or its timeout firing, returns `Error(Aborted)`.
-- **`baseUrl`:** keeps its path prefix, and a trailing slash is optional. An invalid `baseUrl` throws.
-- **`call`:** for contracts without a body. **`callWithBody`:** for POST contracts.
-- **Throws:** both reject the promise for bugs in the calling code: a missing or non-scalar path param, a codec that throws, an invalid `baseUrl`.
-- **`Unauthorized`:** any 401/403 that isn't a declared error. `reason` comes from a resAPI `Reject`.
-- **`message`:** English defaults for every case except declared errors.
+- **`make`:** creates a client. If you omit `~fetch`, it uses the global `fetch` function.
+- **Headers:** for JSON requests, headers merge in this order: client defaults, resAPI's `content-type`, then headers supplied to the call. Later values override earlier ones. Header names are case-insensitive.
+- **`~signal`:** accepts a Fetch `AbortSignal`. If the signal is aborted or times out, the call returns `Error(Aborted)`.
+- **`baseUrl`:** the client preserves its path prefix. A trailing slash is optional. An invalid URL causes the call to throw.
+- **`call` and `callWithBody`:** use `call` for contracts without a request body and `callWithBody` for POST contracts.
+- **Exceptions:** both functions reject their promise for bugs in the calling code, such as a missing or non-scalar path parameter, a codec that throws, or an invalid `baseUrl`.
+- **`Unauthorized`:** reports a 401 or 403 that is not a declared application error. The optional `reason` comes from a resAPI `Reject` response.
+- **`message`:** provides a default English message for each error. Supply `~declared` to choose messages for declared application errors.
 
 [Errors](errors.md#on-the-client) explains each error variant.
 
 ### `Fetch`
 
-A source-compatible subset of [`@rescript/webapi`](https://github.com/rescript-lang/experimental-rescript-webapi)'s Fetch bindings: the same module names, functions, labels and record fields, only fewer of them. When ReScript 13 and webapi are stable, `ResApi.Fetch` will become re-exports of webapi, and code written against it keeps compiling. Bind other libraries' Fetch functions against these types.
+`ResApi.Fetch` provides a subset of [`@rescript/webapi`](https://github.com/rescript-lang/experimental-rescript-webapi)'s Fetch bindings, using the same module names, functions, labels, and record fields. The plan is to re-export webapi's bindings when ReScript 13 and webapi are stable, preserving compatibility with existing code. Use these types when writing bindings for other libraries' Fetch functions.
 
 ```rescript
 module Request: {
@@ -171,7 +171,7 @@ let fetch: (string, ~init: Request.requestInit=?) => promise<Response.t>
 let fetchWithRequest: (Request.t, ~init: Request.requestInit=?) => promise<Response.t>
 ```
 
-For example, `Fetch.Response.jsonR(~data=json, ~init={status: 201})`, `response.status`, or `response.headers->Fetch.Headers.set(~name="x-powered-by", ~value="resAPI")`.
+For example, use `Fetch.Response.jsonR(~data=json, ~init={status: 201})` to create a JSON response, `response.status` to read its status, or `response.headers->Fetch.Headers.set(~name="x-powered-by", ~value="resAPI")` to set a header.
 
 ### `Dispatch` (unstable)
 
@@ -189,11 +189,11 @@ let run: (
 ) => promise<response>
 ```
 
-The server pipeline shared by `@resapi/hono` and `@resapi/express`. It is public only because the adapters need it, and it may change in any release. Applications don't call it.
+The shared request pipeline used by `@resapi/hono` and `@resapi/express`. This module is public so the adapters can access it, but its interface is unstable and may change between releases. Application code should use the adapters instead.
 
 ## `@resapi/hono` (namespace `ResApiHono`)
 
-Hono 4. See [Getting started](getting-started.md) and the guides after it, Hono version.
+The Hono adapter supports Hono 4. Choose Hono in [Getting started](getting-started.md) and the other guides for examples.
 
 ### `Router`
 
@@ -214,11 +214,11 @@ let assertRegistered: (t<'env>, array<Endpoint.any>) => unit  // for tests
 let fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t>
 ```
 
-- **The router is a Hono app.** It's a mutable builder, so `get`, `post`, `use` and `register` add to the app and return it for piping. A router is a valid Worker default export.
-- **`'env`:** the bindings type. A router that never reads `Context.env` must be annotated, as in `Router.t<unit>`.
-- **`use`:** takes native Hono middleware. Hono's built-in middleware binds directly, for example `@module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"`. Middleware runs in registration order, with the first `use` as the outermost layer, and it also runs for unmatched routes.
-- **Exceptions:** an exception from a plain handler or middleware ends as Hono's plain, logged 500.
-- **`fetch`:** calls the app in-process.
+- **The router is a Hono app.** `get`, `post`, `use`, and `register` modify the app and return it, so you can pipe calls together. You can export the router directly as a Worker.
+- **`'env`:** describes the environment bindings. If the router never reads `Context.env`, add an explicit type annotation, such as `Router.t<unit>`.
+- **`use`:** accepts native Hono middleware. For example, bind the logger with `@module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"`. Middleware runs in registration order, with the first `use` forming the outermost layer. It also runs for unmatched requests within its path scope.
+- **Exceptions:** plain handlers and middleware use Hono's error handling. By default, unhandled errors are logged and returned as HTTP 500.
+- **`fetch`:** sends a request directly to the app in the same process, without an HTTP server.
 
 ### `Context`
 
@@ -251,7 +251,7 @@ type route<'env>
 let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'env, 'p, 'b, 'r, 'e>) => route<'env>
 ```
 
-The handler receives decoded `params` and `body`, and returns `Ok(response)` (sent as 200) or `Error(declaredError)`. Invalid input is a 400, and an exception is logged and answered with a 500 that reveals nothing. It never reaches Hono's `onError`. [Errors](errors.md#on-the-server) lists every case and the wire formats.
+The handler receives decoded `params` and `body`. Return `Ok(response)` for an HTTP 200 response or `Error(declaredError)` for a declared application error. Invalid input returns HTTP 400. Exceptions are logged and returned as HTTP 500 without exposing their details; they do not reach Hono's `onError`. See [Errors](errors.md#on-the-server) for all cases and response formats.
 
 ### `Reject`
 
@@ -260,11 +260,11 @@ let unauthenticated: (~reason: string=?) => Fetch.Response.t  // 401
 let forbidden: (~reason: string=?) => Fetch.Response.t        // 403
 ```
 
-For middleware: `Some(Reject.forbidden(~reason="mfa_required"))`. The body is `{"error": {"kind": "unauthenticated" | "forbidden", "message": <reason or "">, "path": []}}`.
+Use these responses in middleware, for example `Some(Reject.forbidden(~reason="mfa_required"))`. The body has the format `{"error": {"kind": "unauthenticated" | "forbidden", "message": <reason or "">, "path": []}}`.
 
 ## `@resapi/express` (namespace `ResApiExpress`)
 
-Express 5 only. See [Getting started](getting-started.md) and the guides after it, Express version.
+The Express adapter requires Express 5. Choose Express in [Getting started](getting-started.md) and the other guides for examples.
 
 ### `Router`
 
@@ -286,9 +286,9 @@ let listen: (t, int, unit => unit) => server  // port 0 picks a free port
 let close: server => unit
 ```
 
-- **`use`:** takes native Express middleware, such as `@module("express") external json: unit => Router.middleware = "json"`. The first `use` is the outermost layer, and middleware also runs for unmatched routes.
-- **`register`:** mounts a typed endpoint. POST routes get a raw-text body parser (100kb limit), and a body already parsed upstream is used as is.
-- **Exceptions:** a rejected plain handler or a thrown middleware exception goes to Express's error handler, with ReScript exceptions rethrown as JS `Error`s.
+- **`use`:** accepts native Express middleware. For example, bind the JSON parser with `@module("express") external json: unit => Router.middleware = "json"`. Middleware runs in registration order, including for unmatched requests within its path scope.
+- **`register`:** adds a typed endpoint. POST routes include a raw-text body parser with a 100kb limit. If earlier middleware has already parsed the body, resAPI uses that result.
+- **Exceptions:** rejected promises from plain handlers and exceptions from middleware go to Express's error handler. Raw ReScript exceptions are converted to JavaScript `Error` objects.
 
 ### `Req` and `Res`
 
@@ -323,7 +323,7 @@ type route
 let make: (Endpoint.t<'p, 'b, 'r, 'e>, handler<'p, 'b, 'r, 'e>) => route
 ```
 
-Behaves as on Hono. Typed-endpoint exceptions never reach Express's error middleware.
+As on Hono, the handler receives decoded request data and returns `Ok(response)` or `Error(declaredError)`. resAPI handles typed endpoint exceptions itself, so they never reach Express's error middleware.
 
 ### `Reject`
 
@@ -332,7 +332,7 @@ let unauthenticated: (Res.t, ~reason: string=?) => unit  // 401
 let forbidden: (Res.t, ~reason: string=?) => unit        // 403
 ```
 
-Sends the response; call it instead of `next()`. The body is the same as on Hono.
+These functions send the rejection response. Call them instead of `next()` to stop processing the request. The response body has the same format as on Hono.
 
 ## `@resapi/sury`
 
@@ -342,4 +342,4 @@ Sends the response; call it instead of `next()`. The body is the same as on Hono
 let make: S.t<'a> => ResApi.Codec.t<'a>
 ```
 
-`make` compiles the schema's decoder and encoder immediately, so call it at module top level. Workers forbid the code generation it needs once a request is running. Errors keep Sury's field path, with array indexes as strings.
+`make` compiles the schema's decoder and encoder when you call it. Define codecs at module top level because Workers prohibit this code generation during a request. Decode errors preserve Sury's field path, with array indexes represented as strings.

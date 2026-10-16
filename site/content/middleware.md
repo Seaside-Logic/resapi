@@ -1,15 +1,15 @@
 # Middleware and auth
 
-This page covers middleware on Hono and Express, and protecting typed endpoints with auth. It follows on from [Getting started](getting-started.md).
+This page builds on [Getting started](getting-started.md) and shows how to use middleware to protect typed endpoints on Hono and Express.
 
-`Router.use` takes the framework's native middleware, so its built-ins and third-party middleware bind with one external. Auth is ordinary middleware, mounted for a path. It runs before resAPI decodes anything, so an unauthenticated request gets its 401 before any 400, and its body is never read. Contracts don't mention auth.
+`Router.use` accepts the framework's native middleware. To use built-in or third-party middleware, define a ReScript external for it. Register auth middleware for the paths you want to protect, before adding the routes. It can reject an unauthenticated request with a 401 before resAPI validates the parameters or reads the body. Auth stays in the server setup; contracts don't need to declare it.
 
-resAPI adds two small helpers:
+resAPI provides two helpers for auth middleware:
 
-- **`Reject.unauthenticated(~reason=?)`** (401) and **`Reject.forbidden(~reason=?)`** (403) answer in resAPI's error shape, `{"error": {"kind": "unauthenticated", "message": "invalid_token", "path": []}}`. The typed client sees `Error(Unauthorized({status, reason}))`, here with `reason: Some("invalid_token")`, so the UI can word each reason. Any other middleware's 401 or 403 is `Unauthorized` too, with `reason: None`.
-- **A key** passes a typed value, such as the signed-in user, from middleware to handlers. The middleware sets it and the handler reads it with `getOrThrow`, which throws when the value is missing: that means the middleware isn't mounted for that path, and inside a typed endpoint it becomes a logged 500 that reveals nothing. `get` returns an `option` for routes where the value is optional.
+- **`Reject.unauthenticated(~reason=?)`** (401) and **`Reject.forbidden(~reason=?)`** (403) return responses in resAPI's error format, for example `{"error": {"kind": "unauthenticated", "message": "invalid_token", "path": []}}`. The typed client receives `Error(Unauthorized({status, reason}))`. In this example, `reason` is `Some("invalid_token")`, which lets your UI choose an appropriate message. A 401 or 403 from other middleware is also reported as `Unauthorized`, usually with `reason: None`.
+- **A key** passes a typed value, such as the signed-in user, from middleware to a handler. The middleware sets the value, and the handler reads it with `getOrThrow`. A missing value usually means the middleware wasn't registered for that path. In a typed endpoint, the resulting exception is logged and returned as HTTP 500 without exposing its details. For optional values, use `get`, which returns an `option`.
 
-This contract is protected in the examples below:
+The examples below protect an endpoint with this contract:
 
 ```rescript
 // src/Api/ProfileApi.res
@@ -29,13 +29,13 @@ let getProfile = Endpoint.get("/me", ~params=Codec.unit, ~response=profileCodec)
 
 <p class="framework-label"><strong>Hono</strong></p>
 
-Hono middleware has the shape `(ctx, next) => promise<option<Response>>`. Hono's built-ins bind with one external:
+Hono middleware has the signature `(ctx, next) => promise<option<Response>>`. You can bind built-in middleware with a ReScript external:
 
 ```rescript
 @module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"
 ```
 
-Your own middleware has the same shape. Call `await next()` and return `None` to continue, or return `Some(response)` to answer without running the rest:
+Use the same signature for your own middleware. Call `await next()` to run the remaining middleware and handler, then return `None`. To respond immediately, return `Some(response)` without calling `next()`:
 
 ```rescript
 let poweredBy: Router.middleware<'env> = async (ctx, next) => {
@@ -45,11 +45,11 @@ let poweredBy: Router.middleware<'env> = async (ctx, next) => {
 }
 ```
 
-- **Order.** Middleware and routes run in registration order, with the first `use` as the outermost layer. Middleware registered *after* a route doesn't run for it, so register it first.
-- **Paths.** `~path="/accounts/*"` covers `/accounts` and everything under it, but not `/accountsx`. Without `~path`, middleware runs for every request, including unmatched ones.
-- **After `next()`.** `Context.res` is the response so far, and `Context.setHeader` still sets headers. An exception from a handler has already become a 500 by then, so middleware can't catch it.
+- **Order.** Register middleware before the routes that need it. Middleware and routes run in registration order, with the first `use` forming the outermost layer.
+- **Paths.** `~path="/accounts/*"` matches `/accounts` and everything under it, but not `/accountsx`. Omit `~path` to run middleware for every request, including requests that match no route.
+- **After `next()`.** Use `Context.res` to read the response and `Context.setHeader` to add headers. By this point, handler exceptions have already been converted to responses, so middleware can inspect the response but cannot catch the original exception.
 
-Bearer-token auth, and a server that uses it:
+Here is a bearer-token middleware and a server that uses it:
 
 ```rescript
 // src/BearerAuth.res
@@ -85,12 +85,12 @@ let app: Router.t<unit> =
   )
 ```
 
-Keys use Hono's per-request map (`c.set`/`c.get`), separate from the request object, so a key's name can't clash with Hono's own fields.
+Keys use Hono's per-request map (`c.set`/`c.get`). This map is separate from the request object, so key names don't conflict with Hono's request fields.
 
-Hono's own auth middleware works too, and the client sees its 401s and 403s as `Unauthorized` with `reason: None`. Two details:
+You can also use Hono's auth middleware. The client reports its 401 and 403 responses as `Unauthorized` with `reason: None`. Keep two details in mind:
 
-- **`hono/bearer-auth`** answers a malformed `Authorization` header (`Bearer` with no token, say) with 400, not 401. The client sees that as `UnexpectedStatus`.
-- **Values third-party middleware sets** are read with a key of the same name. `hono/jwt` stores the verified payload under `"jwtPayload"`, so `let payloadKey: ResApi.Key.t<Claims.t> = ResApi.Key.make("jwtPayload")` reads it. The type is your declaration: resAPI doesn't check the value.
+- **`hono/bearer-auth`** returns HTTP 400 for a malformed `Authorization` header, such as `Bearer` without a token. The client reports this as `UnexpectedStatus`.
+- **Read values from third-party middleware with a key of the same name.** For example, `hono/jwt` stores the verified payload under `"jwtPayload"`. Declare `let payloadKey: ResApi.Key.t<Claims.t> = ResApi.Key.make("jwtPayload")` to read it. You are responsible for choosing the correct type; resAPI doesn't validate the stored value.
 
 </div>
 
@@ -98,15 +98,15 @@ Hono's own auth middleware works too, and the client sees its 401s and 403s as `
 
 <p class="framework-label"><strong>Express</strong></p>
 
-Express middleware has the shape `(req, res, next) => unit`. Express's own middleware binds with one external:
+Express middleware has the signature `(req, res, next) => unit`. You can bind built-in middleware with a ReScript external:
 
 ```rescript
 @module("express") external json: unit => ResApiExpress.Router.middleware = "json"
 ```
 
-Your own middleware can read headers, reject a request, set response headers, and pass values to handlers. Middleware runs in registration order, so register it before the routes it protects.
+Your middleware can read request headers, reject requests, set response headers, and pass values to handlers. Call `next()` to continue processing. Middleware runs in registration order, so register it before the routes it protects.
 
-Bearer-token auth, and a server that uses it:
+Here is a bearer-token middleware and a server that uses it:
 
 ```rescript
 // src/BearerAuth.res
@@ -142,8 +142,8 @@ let app =
   )
 ```
 
-A key named `"user"` also reads Passport's `req.user`.
+You can also use keys to read values set by other middleware. For example, a key named `"user"` reads Passport's `req.user`.
 
-**Pick key names Express doesn't use.** On Express, a key is a property on `req` itself, so it shares the namespace with Express's own fields. A name backed by a getter, such as `query`, `path`, `hostname`, `ip`, `protocol` or `secure`, makes `Req.set` throw a `TypeError`. A name Express or resAPI writes, such as `params`, `body`, `route` or `baseUrl`, is overwritten later in the request, or breaks what reads it. Use a distinctive name (`"user"`, `"account"`, `"apiKey"`), or one that matches the middleware you're reading from. Hono keeps `c.set` values in a separate map, so this only applies to Express.
+**Choose key names that don't conflict with Express.** Express stores keyed values directly on `req`, alongside its own fields. Using a getter property such as `query`, `path`, `hostname`, `ip`, `protocol`, or `secure` causes `Req.set` to throw a `TypeError`. Fields such as `params`, `body`, `route`, and `baseUrl` may be overwritten during the request, and changing them can break later handlers. Choose a distinct name, such as `"user"`, `"account"`, or `"apiKey"`, or use the name expected by the middleware you're integrating with. This restriction applies only to Express; Hono stores keyed values in a separate map.
 
 </div>
