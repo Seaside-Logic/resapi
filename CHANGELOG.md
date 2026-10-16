@@ -34,14 +34,14 @@ These changes come from testing 0.1.0 against a real application (WealthJack) an
   - `Router.notFound` and `Context.request` (Hono)
   - `Endpoint.any` with `Router.assertRegistered`, a test-time check that every contract is registered
 - **`Dispatch.errorResponse`**, the framework error body, for adapters (`Dispatch` stays unstable).
-- **Docs:** a [Hono guide](docs/hono.md) beside the Express one, a compiled auth-middleware example in Getting started, and a section on reading type errors.
+- **Docs:** a Hono guide beside the Express one (both now part of the shared guides, starting with [Getting started](docs/getting-started.md)), a compiled auth-middleware example in Getting started, and a section on reading type errors.
 
 ### Migrating from 0.1.0
 
 - **Client matches:** remove the `InvalidParams` and `EncodeFailed` arms. Handle `Unauthorized({status, reason})` where 401/403 used to land in `UnexpectedStatus`, or end the match with `Error(error) => Client.message(error, ~declared=...)`.
 - **Programmer errors:** a call with a missing path param or a throwing codec now rejects instead of resolving to `Error(...)`. Let it surface as the bug it is, or catch it where you call.
 - **Fetch:** apply the renames above. Bindings to other libraries that used `ResApi.Fetch` types keep working once their calls are renamed.
-- **Auth:** if handlers checked the session themselves, that still works. To move it into middleware, see [Getting started](docs/getting-started.md#6-protect-endpoints-with-middleware) or the [Hono](docs/hono.md#auth) and [Express](docs/express.md#middleware) guides.
+- **Auth:** if handlers checked the session themselves, that still works. To move it into middleware, see [Middleware and auth](docs/middleware.md).
 
 ### Tested with
 

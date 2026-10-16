@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>resAPI: type-safe HTTP contracts for ReScript</title>
+    <meta
+      name="description"
+      content="Define an HTTP API once in ReScript. Share types and validation between clients and servers, on Hono, Express or Cloudflare Workers."
+    />
+    <meta property="og:title" content="resAPI: type-safe HTTP contracts for ReScript" />
+    <meta
+      property="og:description"
+      content="Define your API once. Share types and validation between clients and servers."
+    />
+    <meta property="og:url" content="https://resapi.dev/" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e6484f'/%3E%3Cpath d='M9 9h8a5 5 0 0 1 0 10h-2l5 5h-4l-5-5v5H9z' fill='white'/%3E%3C/svg%3E"
+    />
+    <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      // Set the theme before first paint to avoid a flash. Storage can be blocked; fall back to the OS setting.
+      let stored = null
+      try {
+        stored = localStorage.getItem('theme')
+      } catch {}
+      document.documentElement.dataset.theme =
+        stored ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/Main.res.mjs"></script>
+  </body>
+</html>

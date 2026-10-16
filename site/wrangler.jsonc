@@ -1,9 +1,9 @@
-// resapi.dev: a static landing page served as Workers static assets. Deploy with `npx wrangler deploy`
-// from this directory (see README.md). Not part of the npm workspace.
+// resapi.dev: the docs site, built to ./dist and served as Workers static assets. Build with `npm run build`,
+// then deploy with `npx wrangler deploy` from this directory (see README.md). Not part of the npm workspace.
 {
   "name": "resapi-site",
   "account_id": "8aba16da819fee58570d0caa40466eef",
   "compatibility_date": "2026-10-01",
-  "assets": {"directory": "./public"},
+  "assets": {"directory": "./dist", "not_found_handling": "single-page-application"},
   "routes": [{"pattern": "resapi.dev", "zone_name": "resapi.dev", "custom_domain": true}]
 }

@@ -1,6 +1,6 @@
 # Errors
 
-resAPI keeps four kinds of failure apart: invalid requests, declared application errors, unexpected server failures, and failures on the client's side of the call. Each has its own status, wire format and client variant.
+resAPI keeps four kinds of failure apart: invalid requests, declared application errors, unexpected server failures, and failures on the client's side of the call. Each has its own status, wire format and client variant. Mistakes in your own code against a contract are caught earlier, as [type errors](#reading-type-errors).
 
 ## On the server
 
@@ -42,13 +42,13 @@ resAPI handles every exception inside a typed endpoint itself:
 - The caller gets `500 {"error": {"kind": "internal", "message": "Internal Server Error", "path": []}}`, which reveals no detail.
 - The exception does **not** reach Hono's `onError` or Express's error middleware. Behaviour is therefore the same on both adapters.
 
-Plain routes (`Router.get`/`post`) and middleware keep their framework's own error handling. resAPI only rethrows raw ReScript exceptions as JS `Error`s, so that Hono handles them at all and Express logs a stack. Both frameworks then answer with a plain 500. Express's default handler puts the stack in the response body unless `NODE_ENV=production`.
+Plain routes (`Router.get`/`post`/`use`) and middleware keep their framework's own error handling: Hono's `onError` or Express's error middleware. resAPI only rethrows raw ReScript exceptions as JS `Error`s, so that Hono handles them at all and Express logs a stack. JS errors, including Hono's `HTTPException`, pass through untouched. Both frameworks' defaults log the error and answer with a plain 500. Express's default handler puts the stack in the response body unless `NODE_ENV=production`.
 
-On Express, body-parser failures happen before resAPI runs and come back in Express's format: a body over the size limit (413), an unsupported charset (415), or malformed JSON rejected by an upstream `express.json()` (400). See the [Express guide](express.md#request-bodies).
+On Express, body-parser failures happen before resAPI runs and come back in Express's format: a body over the size limit (413), an unsupported charset (415), or malformed JSON rejected by an upstream `express.json()` (400). See [Request bodies](request-bodies.md).
 
 ### Content type
 
-A typed POST accepts any content type, as long as the body is valid JSON. resAPI never answers 415.
+A typed POST accepts any content type, as long as the body is valid JSON. resAPI never answers 415. See [Request bodies](request-bodies.md).
 
 ## On the client
 
@@ -80,4 +80,13 @@ switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
 | Error(Unauthorized({reason: Some("mfa_required"), _})) => Error("Turn on two-factor authentication first.")
 | Error(error) => Error(Client.message(error, ~declared=_ => "That didn't work."))
 }
+```
+
+## Reading type errors
+
+resAPI's checks are type errors, and ReScript prints the full types involved, so some messages are long. Look for the pair "This has type … But it's expected to have type …": it names what you wrote and what the contract requires. With long generic types, the final "The incompatible parts" lines name just the difference. For example, a handler for `getAccount` that returns `Ok("a1")` reports:
+
+```text
+This has type: string
+But it's expected to have type: AccountApi.account
 ```

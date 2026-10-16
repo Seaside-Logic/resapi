@@ -1,0 +1,9 @@
+{
+  "name": "resapi-site",
+  "sources": [{ "dir": "src", "subdirs": true }],
+  "package-specs": { "module": "esmodule", "in-source": true },
+  "suffix": ".res.mjs",
+  "jsx": { "version": 4 },
+  "dependencies": ["@rescript/react", "rescript-radix"],
+  "warnings": { "number": "+a-4-9-20-40-41-42-44-45-70", "error": "+a" }
+}

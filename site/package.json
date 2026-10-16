@@ -1,0 +1,25 @@
+{
+  "name": "resapi-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "res:watch": "rescript watch",
+    "dev": "vite",
+    "build": "rescript && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rescript/react": "0.15.0",
+    "lucide-react": "1.52.0",
+    "marked": "18.1.1",
+    "radix-ui": "1.8.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "rescript": "12.3.1",
+    "rescript-radix": "0.1.0",
+    "shiki": "4.5.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.4"
+  }
+}

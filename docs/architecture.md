@@ -89,7 +89,7 @@ Hono provides routing, path matching and Fetch integration. resAPI uses Hono's f
 
 Any exception from a codec or handler is logged as the JS `Error` itself, so the stack is preserved. The client gets `500 {"error": {"kind": "internal", "message": "Internal Server Error"}}` and no detail.
 
-Usage details (middleware and auth, the `'env` annotations, body limits, Workers) are in the [Hono guide](hono.md).
+Usage details are in the Hono versions of the guides: the `'env` annotations and Workers in [Getting started](getting-started.md), then [Middleware and auth](middleware.md) and [Request bodies](request-bodies.md) (body limits).
 
 ## Server adapter: Express
 
@@ -101,7 +101,7 @@ Usage details (middleware and auth, the `'env` annotations, body limits, Workers
 - **Request bodies.** `Router.register` mounts POST endpoints behind `express.text({type: () => true})`, so `Dispatch` sees the raw body and reports `malformed_json` exactly as on Hono. If an upstream `express.json()` has already parsed the body, the parsed value is used.
 - **Body parsers and auth.** `register` mounts its body parser on each route, so `Router.use` middleware, including auth, runs before any body is read. An upstream body parser mounted globally answers its own failures before your auth middleware, which is why the guide says not to.
 
-Usage details (body parsers and size limits, content types, request-scoped values, supported versions) are in the [Express guide](express.md).
+Usage details are in the Express versions of the guides: supported versions in [Getting started](getting-started.md), request-scoped values in [Middleware and auth](middleware.md), and body parsers, size limits and content types in [Request bodies](request-bodies.md).
 
 ## Auth is middleware
 

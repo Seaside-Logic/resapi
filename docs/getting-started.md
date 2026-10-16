@@ -1,10 +1,16 @@
 # Getting started
 
-This guide builds a small API with one typed endpoint, serves it from a Cloudflare Worker, and calls it from a typed client. It assumes you know ReScript, but not resAPI or Hono.
+This guide builds a small API with one typed endpoint, serves it from [Hono](https://hono.dev) 4 on Cloudflare Workers or [Express](https://expressjs.com) 5 on Node, and calls it from a typed client. It assumes you know ReScript, but not resAPI or the server framework.
 
-The complete version is in [`examples/cloudflare`](../examples/cloudflare). The [Hono guide](hono.md) collects the adapter's details for reference, and the [Express guide](express.md) covers Express.
+Contracts and the client are the same on both servers. Sections that differ have a Hono version and an Express version: pick yours with the Server switch on [resapi.dev](https://resapi.dev/guides/getting-started). On GitHub both versions are shown, one after the other.
+
+The complete versions are in [`examples/cloudflare`](../examples/cloudflare) (Hono on Workers) and [`examples/express`](../examples/express).
 
 ## 1. Install
+
+<div data-framework="hono">
+
+<p class="framework-label"><strong>Hono</strong></p>
 
 ```bash
 npm install @resapi/core @resapi/hono @resapi/sury hono sury sury-ppx
@@ -24,13 +30,47 @@ npm install --save-dev rescript wrangler
 }
 ```
 
+Modules are under the `ResApiHono` namespace. `wrangler` is only needed for Workers.
+
+**Versions:** Hono 4 (tested on 4.13.13). resAPI is tested in workerd and by calling the app in-process under Node.
+
+</div>
+
+<div data-framework="express">
+
+<p class="framework-label"><strong>Express</strong></p>
+
+```bash
+npm install @resapi/core @resapi/express @resapi/sury express sury sury-ppx
+npm install --save-dev rescript
+```
+
+`rescript.json`:
+
+```json
+{
+  "name": "my-api",
+  "sources": {"dir": "src", "subdirs": true},
+  "dependencies": ["@resapi/core", "@resapi/express", "@resapi/sury", "sury"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".res.mjs",
+  "ppx-flags": ["sury-ppx/bin"]
+}
+```
+
+Modules are under the `ResApiExpress` namespace.
+
+**Versions:** Express 5 only (tested on 5.2.1). Express 4 is not supported.
+
+</div>
+
 resAPI needs ReScript 12.3.1 or later. `sury-ppx` is optional: it generates the `*Schema` values from `@schema` types. Hand-written Sury schemas, or hand-written codecs, work the same way.
 
 npm may warn that `sury-ppx` has an install script not covered by `allowScripts`. The PPX works either way. To silence the warning, run `npm install-scripts approve sury-ppx`.
 
 ## 2. Define a contract
 
-A contract module holds only types, codecs and contracts. It never imports server code, so clients can import it too.
+A contract module holds only types, codecs and contracts. It never imports server code, so clients can import it too, and it is the same for Hono and Express.
 
 ```rescript
 // src/Api/AccountApi.res
@@ -78,6 +118,10 @@ Rules worth knowing up front:
 
 ## 3. Implement the server
 
+<div data-framework="hono">
+
+<p class="framework-label"><strong>Hono</strong></p>
+
 ```rescript
 // src/App.res
 open ResApi
@@ -105,11 +149,57 @@ let app: Router.t<unit> =
   )
 ```
 
-`Router.get`/`post` register plain routes: you get the context and return a Fetch `Response`. `Router.register` adds a typed endpoint. Its handler receives decoded `params` and `body`, and returns `Ok(response)` or `Error(declaredError)`.
+- **`Router.t` is the Hono app.** `Router.make()` is `new Hono()`, so the router is a valid Worker default export, and any Hono API resAPI doesn't wrap (`app.onError`, `app.route`, ...) binds against `Router.t` with one external.
+- **`Router.get`/`post`** register plain Hono routes: the context in, a Fetch `Response` out.
+- **`Router.register`** adds a typed endpoint. The handler gets the Hono context and the decoded `params` and `body`. It returns `Ok(response)` or `Error(declaredError)`, and resAPI sends the response.
+
+</div>
+
+<div data-framework="express">
+
+<p class="framework-label"><strong>Express</strong></p>
+
+```rescript
+// src/App.res
+open ResApiExpress
+
+let accounts: dict<AccountApi.account> = dict{}
+
+let app =
+  Router.make()
+  ->Router.get("/health", async (_req, res) => res->Res.send("ok"))
+  ->Router.register(
+    AccountApi.getAccount->EndpointHandler.make(async (_req, {params}) =>
+      switch accounts->Dict.get(params.id) {
+      | Some(account) => Ok(account)
+      | None => Error(NotFound)
+      }
+    ),
+  )
+  ->Router.register(
+    AccountApi.createAccount->EndpointHandler.make(async (_req, {body}) => {
+      let account: AccountApi.account = {id: "acct_1", name: body.name, balance: body.balance}
+      accounts->Dict.set(account.id, account)
+      Ok(account)
+    }),
+  )
+```
+
+- **`Router.t` is the Express app.** Any Express API not wrapped here, such as `app.set`, binds against it with one external.
+- **`Router.get`/`post`** register plain Express routes: `(req, res) => promise<unit>`.
+- **`Router.register`** adds a typed endpoint. The handler gets the Express `Req.t` and the decoded `params` and `body`. It returns `Ok(response)` or `Error(declaredError)`, and resAPI sends the response.
+
+</div>
 
 Before your handler runs, the adapter decodes path params, then parses and decodes the body. Invalid input gets a 400 with `{"error": {"kind", "message", "path"}}`. The kinds are `invalid_params`, `malformed_json` and `invalid_body`. An exception from your handler or a codec gets a 500 that reveals no detail, and the exception is logged. [Errors](errors.md) covers every case.
 
-## 4. Run it as a Worker
+## 4. Run it
+
+<div data-framework="hono">
+
+<p class="framework-label"><strong>Hono</strong></p>
+
+On Cloudflare Workers:
 
 ```rescript
 // src/Worker.res
@@ -129,46 +219,52 @@ let default = App.app
 npx rescript && npx wrangler dev
 ```
 
-A router is a Hono app, so it is already a valid Worker module. No JavaScript entry file or compatibility flags are needed.
+A router is a Hono app, so `let default = App.app` is the whole Worker entry. No JavaScript file or compatibility flags are needed.
+
+**Other platforms.** `@resapi/hono` imports only Hono and uses the standard Fetch API, so the router should also work on other platforms Hono supports. Each platform needs its own entry point, though, such as `@hono/node-server`'s `serve` on Node or an adapter for AWS Lambda or Azure Functions, and you write that binding yourself. resAPI is tested only on Workers (in workerd) and by calling the app in-process under Node.
 
 ### Environment bindings
 
-Give the router your bindings type and read it with `Context.env`:
+`Router.t<'env>` carries the type of the runtime environment: on Workers, the bindings object. Read it with `Context.env`:
 
 ```rescript
 // src/Env.res
 type t = {@as("API_SECRET") apiSecret: string}
 ```
 
-In a handler on a `Router.t<Env.t>`:
-
 ```rescript
-let secret = (ctx->Context.env).apiSecret
+let app: Router.t<Env.t> = Router.make()->Router.get("/secret-length", async ctx =>
+  Fetch.Response.fromString((ctx->Context.env).apiSecret->String.length->Int.toString)
+)
 ```
 
-The type is a declaration, like any external binding. Cloudflare supplies the object and nothing checks it against `wrangler.jsonc`.
+The type is a declaration, like any external binding. Cloudflare supplies the object, and nothing checks it against `wrangler.jsonc`.
 
-If a router never reads `Context.env`, annotate it, as in `let app: Router.t<unit> = ...`. Otherwise the compiler reports "cannot be generalized".
+Two annotations come up in practice:
 
-### Middleware
+- **A router that never reads `Context.env`** needs one, as in `let app: Router.t<unit> = ...`. Otherwise the compiler reports "cannot be generalized".
+- **A handler defined in its own `let`** that reads a field of the env, such as `(ctx->Context.env).db`, needs its context annotated: `EndpointHandler.make(async (ctx: Context.t<Env.t>, {params}) => ...)`. Without it, nothing tells the compiler which record `db` belongs to. A handler that also calls a function taking `Context.t<Env.t>` gets the type from that call.
 
-`Router.use` takes native Hono middleware, so Hono's built-ins bind with one external:
+</div>
+
+<div data-framework="express">
+
+<p class="framework-label"><strong>Express</strong></p>
+
+On Node:
 
 ```rescript
-@module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"
-
-let app: Router.t<unit> = Router.make()->Router.use(logger())
+// src/Server.res
+let server = App.app->ResApiExpress.Router.listen(3000, () => Console.log("Listening on :3000"))
 ```
 
-Your own middleware has the same shape. Call `await next()` and return `None`, or return `Some(response)` to answer early:
-
-```rescript
-let poweredBy: Router.middleware<'env> = async (ctx, next) => {
-  await next()
-  ctx->Context.setHeader("x-powered-by", "resAPI")
-  None
-}
+```bash
+npx rescript && node src/Server.res.mjs
 ```
+
+A router is an Express app, so Express middleware and settings work on it as is.
+
+</div>
 
 ## 5. Call it from a client
 
@@ -176,7 +272,7 @@ let poweredBy: Router.middleware<'env> = async (ctx, next) => {
 // src/AccountClient.res
 open ResApi
 
-let client = Client.make(~baseUrl="https://my-api.example.workers.dev")
+let client = Client.make(~baseUrl="https://my-api.example.com")
 
 let describe = async id =>
   switch await client->Client.call(AccountApi.getAccount, ~params={id: id}) {
@@ -205,83 +301,16 @@ Use `Client.call` for contracts without a body and `Client.callWithBody` for POS
 - **Headers:** `~headers` on a call, or `Client.make(~headers=...)` for every call. A per-call header overrides the client's, and both override resAPI's `content-type`. Names are case-insensitive.
 - **Cancellation:** `~signal` takes a Fetch `AbortSignal`, such as `Fetch.AbortSignal.timeout(ms)` or `controller.signal` from a `Fetch.AbortController.make()`. An aborted call returns `Error(Aborted)`.
 
-The client module imports only the contract, so a bundle built from it contains no Hono code.
+The client module imports only the contract, so a bundle built from it contains no Hono or Express code.
 
 **Match the cases you handle, then fall back.** `Client.message(error, ~declared)` gives an English default for every case except the contract's declared errors, which you word yourself. A match that ends with `Error(error) => Client.message(error, ...)` (or `Error(_)`) doesn't have to list cases that can't happen for a given endpoint. The full list is in [Errors](errors.md#on-the-client).
 
 `Client.call` rejects (throws) for bugs in the calling code: a missing path param, a codec that throws, or an invalid `baseUrl`. Nothing is sent in those cases.
 
-## 6. Protect endpoints with middleware
+## Next steps
 
-Auth is ordinary Hono middleware, mounted for a path. It runs before resAPI decodes anything, and contracts don't mention it. resAPI adds two small helpers: `Reject` answers in a shape the typed client understands, and a typed key passes the signed-in user to handlers.
-
-```rescript
-// src/Api/ProfileApi.res
-open ResApi
-
-type profile = {name: string}
-
-let profileCodec = Codec.object(
-  ~decode=fields => {name: fields->Codec.field("name", Codec.string)},
-  ~encode=({name}) => [("name", Codec.string.encode(name))],
-)
-
-let getProfile = Endpoint.get("/me", ~params=Codec.unit, ~response=profileCodec)
-```
-
-```rescript
-// src/BearerAuth.res
-open ResApiHono
-
-type user = {name: string}
-
-// The type is declared here; middleware stores the value, handlers read it back.
-let userKey: ResApi.Key.t<user> = ResApi.Key.make("user")
-
-let requireToken: Router.middleware<'env> = async (ctx, next) =>
-  switch ctx->Context.header("authorization") {
-  | None => Some(Reject.unauthenticated())
-  | Some("Bearer secret-token") =>
-    ctx->Context.set(userKey, {name: "Ada"})
-    await next()
-    None
-  | Some(_) => Some(Reject.unauthenticated(~reason="invalid_token"))
-  }
-```
-
-```rescript
-// src/ProfileServer.res
-open ResApiHono
-
-let app: Router.t<unit> =
-  Router.make()
-  ->Router.use(~path="/me", BearerAuth.requireToken)
-  ->Router.register(
-    ProfileApi.getProfile->EndpointHandler.make(async (ctx, _) =>
-      Ok({ProfileApi.name: (ctx->Context.getOrThrow(BearerAuth.userKey)).name})
-    ),
-  )
-```
-
-- **Register middleware before the routes it protects.** Hono runs handlers in registration order.
-- **`Reject`** answers `401 {"error": {"kind": "unauthenticated", "message": "invalid_token", "path": []}}` (or `forbidden` with 403). The client sees `Error(Unauthorized({status, reason}))`, here with `reason: Some("invalid_token")`. Any other middleware's 401 or 403, such as `hono/bearer-auth`'s, is `Unauthorized` too, with `reason: None`.
-- **Keys** use Hono's own `c.set`/`c.get` names, so they also read values that third-party middleware sets (for example `Key.make("jwtPayload")` for `hono/jwt`). `getOrThrow` is for routes behind the middleware. A missing value means it isn't mounted for that path, which becomes a logged 500.
-
-## 7. Test without a server
-
-`Client.make` takes a `~fetch` function. Pass the router's own fetch to run the client against the server in-process:
-
-```rescript
-let client = Client.make(~baseUrl="http://localhost", ~fetch=request => App.app->Router.fetch(request, ()))
-```
-
-Under Node, this exercises routing, validation and codecs. It doesn't enforce Workers restrictions. For that, run the tests against `wrangler dev` as well (see `scripts/test-worker.sh`).
-
-## Reading type errors
-
-resAPI's checks are type errors, and ReScript prints the full types involved, so some messages are long. Look for the pair "This has type … But it's expected to have type …": it names what you wrote and what the contract requires. With long generic types, the final "The incompatible parts" lines name just the difference. For example, a handler for `getAccount` that returns `Ok("a1")` reports:
-
-```text
-This has type: string
-But it's expected to have type: AccountApi.account
-```
+- [Middleware and auth](middleware.md): framework middleware, and protecting endpoints with `Reject` and typed keys
+- [Request bodies](request-bodies.md): content types and size limits
+- [Routing beside typed endpoints](routing.md): plain routes, other libraries, not-found handlers
+- [Testing](testing.md): calling the server from the typed client in tests
+- [Errors](errors.md): every failure the server and client report, the wire formats, and reading type errors
