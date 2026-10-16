@@ -1,4 +1,4 @@
-// Runs the Hono version of docs/getting-started.md in-process, as docs/testing.md shows: create an account,
+// Runs the Hono version of site/content/getting-started.md in-process, as site/content/testing.md shows: create an account,
 // then read it.
 open ResApi
 open Check

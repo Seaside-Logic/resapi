@@ -34,4 +34,4 @@ Run `npm run release:check` before opening a pull request. It runs:
 - Whole-file doc examples start with `// Name.res` and are compiled by `check:packages`. Keep them working.
 - User-visible changes get a line in [CHANGELOG.md](CHANGELOG.md).
 
-[docs/architecture.md](docs/architecture.md) explains the design and the reasons behind it.
+[site/content/architecture.md](site/content/architecture.md) explains the design and the reasons behind it.

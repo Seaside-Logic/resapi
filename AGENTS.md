@@ -16,7 +16,7 @@ npm run format:check
 npx rescript clean   # clear stale build state
 ```
 
-Compile-fail cases live in `tests/compile-fail/cases/*.res`. Each one must fail with the text in its `// expect:` line (or compile, for `ok.res`). Add a case for every new compile-time guarantee. Shared test contracts are in `tests/fixtures/src/TestApi.res`. Architecture and design decisions: `docs/architecture.md`.
+Compile-fail cases live in `tests/compile-fail/cases/*.res`. Each one must fail with the text in its `// expect:` line (or compile, for `ok.res`). Add a case for every new compile-time guarantee. Shared test contracts are in `tests/fixtures/src/TestApi.res`. Architecture and design decisions: `site/content/architecture.md`.
 
 ## ReScript gotchas
 

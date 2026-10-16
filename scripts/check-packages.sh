@@ -2,7 +2,7 @@
 # Packs the four packages and checks the tarballs themselves: exactly the intended files, the root
 # LICENSE, and no workspace-only dependency versions. Then installs them from the tarballs into fresh
 # projects outside the repo, one per tests/consumer scenario, and builds and runs each one. The doc
-# scenarios build the whole-file examples from README.md and docs/ (see extract-doc-files.mjs), once per
+# scenarios build the whole-file examples from README.md and site/content/ (see extract-doc-files.mjs), once per
 # framework for a doc with Hono and Express versions.
 #
 # RESAPI_FROM=<dist-tag> (e.g. next) skips packing and installs the published packages from the npm
@@ -68,7 +68,7 @@ scenario hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.1
 scenario express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
 
 DOC=README.md scenario doc-readme "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "$(tgz express)" "${SURY[@]}" hono@4.13.13 express@5.2.1
-DOC=docs/getting-started.md FRAMEWORK=hono scenario doc-getting-started-hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
-DOC=docs/getting-started.md FRAMEWORK=express scenario doc-getting-started-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
-DOC=docs/middleware.md FRAMEWORK=hono scenario doc-middleware-hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
-DOC=docs/middleware.md FRAMEWORK=express scenario doc-middleware-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
+DOC=site/content/getting-started.md FRAMEWORK=hono scenario doc-getting-started-hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+DOC=site/content/getting-started.md FRAMEWORK=express scenario doc-getting-started-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1
+DOC=site/content/middleware.md FRAMEWORK=hono scenario doc-middleware-hono "$(tgz core)" "$(tgz sury)" "$(tgz hono)" "${SURY[@]}" hono@4.13.13
+DOC=site/content/middleware.md FRAMEWORK=express scenario doc-middleware-express "$(tgz core)" "$(tgz sury)" "$(tgz express)" "${SURY[@]}" express@5.2.1

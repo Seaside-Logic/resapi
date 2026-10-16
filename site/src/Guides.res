@@ -1,4 +1,4 @@
-/** The guides: the repo's Markdown docs, bundled as strings. GuidePage renders the title, so the
+/** The guides: the Markdown guides in ../content, bundled as strings. GuidePage renders the title, so the
 Markdown's own `# Title` line is dropped from the body. */
 
 type section = Guides | Reference
@@ -11,14 +11,14 @@ type t = {
   body: string,
 }
 
-@module("../../docs/getting-started.md?raw") external gettingStarted: string = "default"
-@module("../../docs/middleware.md?raw") external middleware: string = "default"
-@module("../../docs/request-bodies.md?raw") external requestBodies: string = "default"
-@module("../../docs/routing.md?raw") external routing: string = "default"
-@module("../../docs/testing.md?raw") external testing: string = "default"
-@module("../../docs/errors.md?raw") external errors: string = "default"
-@module("../../docs/api.md?raw") external api: string = "default"
-@module("../../docs/architecture.md?raw") external architecture: string = "default"
+@module("../content/getting-started.md?raw") external gettingStarted: string = "default"
+@module("../content/middleware.md?raw") external middleware: string = "default"
+@module("../content/request-bodies.md?raw") external requestBodies: string = "default"
+@module("../content/routing.md?raw") external routing: string = "default"
+@module("../content/testing.md?raw") external testing: string = "default"
+@module("../content/errors.md?raw") external errors: string = "default"
+@module("../content/api.md?raw") external api: string = "default"
+@module("../content/architecture.md?raw") external architecture: string = "default"
 
 let withoutTitle = markdown => markdown->String.replaceRegExp(/^# .*\n+/, "")
 

@@ -1,4 +1,4 @@
-// Runs the Express version of docs/getting-started.md on a free port, as docs/testing.md shows, and calls it
+// Runs the Express version of site/content/getting-started.md on a free port, as site/content/testing.md shows, and calls it
 // over HTTP with the typed client: create an account, then read it.
 open ResApi
 open Check

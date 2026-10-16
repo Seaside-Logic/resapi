@@ -7,7 +7,7 @@ Define an HTTP endpoint once as a contract: method, path, and codecs for params,
 resAPI works with [Hono](https://hono.dev) (including Cloudflare Workers) and [Express](https://expressjs.com) 5 on the server, any Fetch environment on the client, and [Sury](https://github.com/DZakh/sury) schemas or hand-written codecs.
 
 - **Website:** https://resapi.dev
-- **Get started:** [docs/getting-started.md](docs/getting-started.md), for Hono (including Cloudflare Workers) or Express
+- **Get started:** [site/content/getting-started.md](site/content/getting-started.md), for Hono (including Cloudflare Workers) or Express
 
 > **Status: 0.2.0 preview.** The API may change in 0.x releases. See the [changelog](CHANGELOG.md) for what is supported and the known limitations.
 
@@ -132,14 +132,14 @@ No adapter depends on another, and core depends on none of them. Any codec that 
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md): contract, server and client, on Hono (including Cloudflare Workers) or Express 5
-- [Middleware and auth](docs/middleware.md): framework middleware, `Reject` and typed keys
-- [Request bodies](docs/request-bodies.md): content types and size limits
-- [Routing beside typed endpoints](docs/routing.md): plain routes, other libraries, not-found handlers
-- [Testing](docs/testing.md): calling the server from the typed client in tests
-- [Errors](docs/errors.md): every failure the server and client report, the wire formats, and reading type errors
-- [API reference](docs/api.md)
-- [Architecture](docs/architecture.md): design decisions
+- [Getting started](site/content/getting-started.md): contract, server and client, on Hono (including Cloudflare Workers) or Express 5
+- [Middleware and auth](site/content/middleware.md): framework middleware, `Reject` and typed keys
+- [Request bodies](site/content/request-bodies.md): content types and size limits
+- [Routing beside typed endpoints](site/content/routing.md): plain routes, other libraries, not-found handlers
+- [Testing](site/content/testing.md): calling the server from the typed client in tests
+- [Errors](site/content/errors.md): every failure the server and client report, the wire formats, and reading type errors
+- [API reference](site/content/api.md)
+- [Architecture](site/content/architecture.md): design decisions
 - Examples: [Cloudflare Workers](examples/cloudflare), [Express](examples/express)
 
 ## Development

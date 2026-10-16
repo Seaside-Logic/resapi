@@ -1,4 +1,4 @@
-// Runs the Hono version of docs/middleware.md in-process: the profile endpoint behind bearer-token
+// Runs the Hono version of site/content/middleware.md in-process: the profile endpoint behind bearer-token
 // middleware.
 open ResApi
 open Check

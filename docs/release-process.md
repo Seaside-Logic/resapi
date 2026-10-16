@@ -42,9 +42,9 @@ The go-live plan listed eight guides. They are folded into fewer files, so nothi
 
 | Planned | Where it lives |
 | --- | --- |
-| getting-started, cloudflare, hono, express | [getting-started.md](getting-started.md), [middleware.md](middleware.md), [request-bodies.md](request-bodies.md), [routing.md](routing.md) and [testing.md](testing.md), with a Hono (on Workers) and an Express version of each framework-specific section |
-| contracts, client | [api.md](api.md) plus getting-started sections 2 and 5 |
-| errors | [errors.md](errors.md) |
-| architecture | [architecture.md](architecture.md) |
+| getting-started, cloudflare, hono, express | [getting-started.md](../site/content/getting-started.md), [middleware.md](../site/content/middleware.md), [request-bodies.md](../site/content/request-bodies.md), [routing.md](../site/content/routing.md) and [testing.md](../site/content/testing.md), with a Hono (on Workers) and an Express version of each framework-specific section |
+| contracts, client | [api.md](../site/content/api.md) plus getting-started sections 2 and 5 |
+| errors | [errors.md](../site/content/errors.md) |
+| architecture | [architecture.md](../site/content/architecture.md) |
 
 Whole-file examples in the README, getting-started and middleware are compiled and run against the packed packages by `npm run check:packages`, the guides once for each framework. To have a block checked, give it a first line of `// Name.res`. Framework-specific sections are wrapped in `<div data-framework="hono">` or `<div data-framework="express">`, with blank lines around the Markdown inside; resapi.dev shows one at a time.

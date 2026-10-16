@@ -8,4 +8,4 @@ npm install @resapi/core
 
 Add `"@resapi/core"` to `dependencies` in `rescript.json`. Modules are under the `ResApi` namespace.
 
-See the [README](https://github.com/Seaside-Logic/resapi#readme) and [API reference](https://github.com/Seaside-Logic/resapi/blob/main/docs/api.md).
+See the [README](https://github.com/Seaside-Logic/resapi#readme) and [API reference](https://github.com/Seaside-Logic/resapi/blob/main/site/content/api.md).

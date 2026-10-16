@@ -4,7 +4,7 @@ This guide builds a small API with one typed endpoint, serves it from [Hono](htt
 
 Contracts and the client are the same on both servers. Sections that differ have a Hono version and an Express version: pick yours with the Server switch on [resapi.dev](https://resapi.dev/guides/getting-started). On GitHub both versions are shown, one after the other.
 
-The complete versions are in [`examples/cloudflare`](../examples/cloudflare) (Hono on Workers) and [`examples/express`](../examples/express).
+The complete versions are in [`examples/cloudflare`](../../examples/cloudflare) (Hono on Workers) and [`examples/express`](../../examples/express).
 
 ## 1. Install
 

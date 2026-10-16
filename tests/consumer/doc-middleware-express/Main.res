@@ -1,4 +1,4 @@
-// Runs the Express version of docs/middleware.md on a free port: the profile endpoint behind bearer-token
+// Runs the Express version of site/content/middleware.md on a free port: the profile endpoint behind bearer-token
 // middleware, called over HTTP with the typed client.
 open ResApi
 open Check

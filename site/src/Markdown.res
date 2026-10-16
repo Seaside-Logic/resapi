@@ -18,7 +18,7 @@ type marked
 @send external parse: (marked, string) => string = "parse"
 @module("marked") external parseInline: string => string = "parseInline"
 
-let docsUrl = "https://github.com/Seaside-Logic/resapi/blob/main/docs/"
+let docsUrl = "https://github.com/Seaside-Logic/resapi/blob/main/site/content/"
 
 type url
 @new external makeUrl: (string, string) => url = "URL"
@@ -32,7 +32,7 @@ let slugify = text =>
   ->String.replaceRegExp(/[^\w\- ]/g, "")
   ->String.replaceAll(" ", "-")
 
-/** Site or GitHub URL for a link written for the repo's docs/ folder. */
+/** Site or GitHub URL for a link written for the site/content/ folder. */
 let resolveHref = href =>
   if href->String.startsWith("http") || href->String.startsWith("#") || href->String.startsWith("mailto:") {
     href
