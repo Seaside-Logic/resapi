@@ -121,12 +121,12 @@ let accountName = async id =>
 
 ## Packages
 
-| Package | Contents | Depends on |
-| --- | --- | --- |
-| `@resapi/core` | Contracts (`Endpoint`), codecs (`Codec`), route checking, typed `Client`, Fetch bindings | ReScript only |
-| `@resapi/hono` | `Router`, `EndpointHandler`, `Context`: runs contracts on Hono | core; peer `hono` 4 |
-| `@resapi/express` | `Router`, `EndpointHandler`, `Req`, `Res`: runs contracts on Express | core; peer `express` 5 |
-| `@resapi/sury` | `SuryCodec.make`: Sury schema → `Codec.t` | core; peer `sury` 11 |
+| Package           | Contents                                                                                 | Depends on             |
+| ----------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
+| `@resapi/core`    | Contracts (`Endpoint`), codecs (`Codec`), route checking, typed `Client`, Fetch bindings | ReScript only          |
+| `@resapi/hono`    | `Router`, `EndpointHandler`, `Context`: runs contracts on Hono                           | core; peer `hono` 4    |
+| `@resapi/express` | `Router`, `EndpointHandler`, `Req`, `Res`: runs contracts on Express                     | core; peer `express` 5 |
+| `@resapi/sury`    | `SuryCodec.make`: Sury schema → `Codec.t`                                                | core; peer `sury` 11   |
 
 No adapter depends on another, and core depends on none of them. Any codec that implements the two-function `Codec.t` interface works.
 
@@ -157,6 +157,8 @@ npm run check:packages     # pack, then install into fresh projects (incl. the d
 npm run release:check      # every check a release needs
 npm run format:check
 ```
+
+The NPM release process is documented in [release-process.md](docs/release-process.md)
 
 After editing any `rescript.json`, run `npx rescript clean` before building.
 
