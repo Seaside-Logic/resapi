@@ -28,8 +28,8 @@ test("hono: Router.notFound answers unmatched requests", async () => {
 test("hono: assertRegistered passes for registered endpoints and names the missing ones", () => {
   HonoRouter.assertRegistered(routingApp, [Endpoint.any(TestApi.getAccount)]);
   assert.throws(
-    () => HonoRouter.assertRegistered(routingApp, [Endpoint.any(TestApi.getAccount), Endpoint.any(TestApi.createAccount), Endpoint.any(TestApi.addMember)]),
-    { message: "Endpoints without a route: POST /accounts, POST /orgs/:org/members/:member" },
+    () => HonoRouter.assertRegistered(routingApp, [Endpoint.any(TestApi.getAccount), Endpoint.any(TestApi.createAccount), Endpoint.any(TestApi.addMember), Endpoint.any(TestApi.updateAccount)]),
+    { message: "Endpoints without a route: POST /accounts, POST /orgs/:org/members/:member, PUT /accounts/:id" },
   );
 });
 
@@ -44,7 +44,7 @@ test("express: Router.all serves every method", async () => {
 });
 
 test("express: assertRegistered tracks register calls", () => {
-  ExpressRouter.assertRegistered(expressApp, [Endpoint.any(TestApi.getAccount), Endpoint.any(TestApi.createAccount)]);
+  ExpressRouter.assertRegistered(expressApp, [Endpoint.any(TestApi.getAccount), Endpoint.any(TestApi.createAccount), Endpoint.any(TestApi.updateAccount)]);
   assert.throws(
     () => ExpressRouter.assertRegistered(expressRoutingApp, [Endpoint.any(TestApi.getAccount)]),
     { message: "Endpoints without a route: GET /accounts/:id" },

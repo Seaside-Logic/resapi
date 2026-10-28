@@ -19,7 +19,7 @@ In resAPI, each HTTP endpoint is defined by a contract: a value shared by the se
 
 ### Public interfaces
 
-Every module with internal implementation details has a `.resi` file defining its public interface. Anything omitted from that interface is internal. `Endpoint.t` and `EndpointHandler.route` are `private` records: adapters can read their fields, but contracts can only be created through `Endpoint.get` or `Endpoint.post`. This ensures every contract goes through route checking. To test the published package layout, `scripts/check-packages.sh` packs each package and installs it in a fresh project outside the repository.
+Every module with internal implementation details has a `.resi` file defining its public interface. Anything omitted from that interface is internal. `Endpoint.t` and `EndpointHandler.route` are `private` records: adapters can read their fields, but contracts can only be created through `Endpoint.get`, `Endpoint.post`, or `Endpoint.put`. This ensures every contract goes through route checking. To test the published package layout, `scripts/check-packages.sh` packs each package and installs it in a fresh project outside the repository.
 
 **Decision: `Dispatch` is public but unstable.**
 
@@ -54,13 +54,13 @@ type t<'params, 'body, 'response, 'error> = {
 }
 ```
 
-`Endpoint.get(path, ~params, ~response)` sets the body type to `unit`. `Endpoint.post` also accepts a `~body` codec. GET and POST are currently the only supported methods; others will be added when an application needs them.
+`Endpoint.get(path, ~params, ~response)` sets the body type to `unit`. `Endpoint.post` and `Endpoint.put` also accept a `~body` codec. GET, POST, and PUT are currently the only supported methods; others will be added when an application needs them.
 
 The contract's type parameters determine the handler's input and output types and the client's parameter, body, and result types. A mismatch produces a compile error where the handler or client call is defined. This checking requires no casts.
 
 ## Route checking at construction
 
-The route string and parameter codec both describe the path parameter names, so they can disagree. A prototype PPX generated the parameter type from the route at compile time, but the cost of maintaining native PPX binaries outweighed the benefit. Instead, `Endpoint.get` and `Endpoint.post` call `RouteCheck` and throw if they find a mismatch. Because contracts are defined at module top level, an invalid contract prevents the module from loading. Under Wrangler, the Worker fails to start with `Invalid route "<path>": ...`.
+The route string and parameter codec both describe the path parameter names, so they can disagree. A prototype PPX generated the parameter type from the route at compile time, but the cost of maintaining native PPX binaries outweighed the benefit. Instead, `Endpoint.get`, `Endpoint.post`, and `Endpoint.put` call `RouteCheck` and throw if they find a mismatch. Because contracts are defined at module top level, an invalid contract prevents the module from loading. Under Wrangler, the Worker fails to start with `Invalid route "<path>": ...`.
 
 `RouteCheck` tests codecs with sample data, so it can work without codec metadata:
 
@@ -78,7 +78,7 @@ Hono provides routing, path matching, and Fetch integration. The adapter exposes
 
 - **`Router.t<'env>` is the Hono app.** Export it from a Worker with `let default = app`. To use an unwrapped Hono API, define an external that accepts `Router.t`. The phantom type parameter `'env` describes the Worker's bindings, which you read with `Context.env`.
 - **Native middleware.** `Router.middleware<'env>` uses Hono's `(c, next)` signature and returns `option<Response>`. Built-in middleware such as `hono/logger`, `hono/bearer-auth`, and `hono/cors` can be bound with a single external. Tests cover logger and bearer-auth. Hono's middleware behavior is preserved: by the time control returns to outer middleware, a handler exception has already become a response, so middleware cannot catch the original exception.
-- **Exception conversion.** Hono's error handling (`compose`, `onError`) only handles values that are `instanceof Error`. Other values are rethrown from `app.fetch`. Raw ReScript exceptions are plain objects, so they would escape without a response. `Router.get`, `Router.post`, and `Router.use` catch these exceptions and rethrow them as JavaScript `Error` objects. Existing JavaScript errors, including Hono's `HTTPException`, pass through unchanged. Hono can then handle both using its documented error handling.
+- **Exception conversion.** Hono's error handling (`compose`, `onError`) only handles values that are `instanceof Error`. Other values are rethrown from `app.fetch`. Raw ReScript exceptions are plain objects, so they would escape without a response. `Router.get`, `Router.post`, `Router.put`, and `Router.use` catch these exceptions and rethrow them as JavaScript `Error` objects. Existing JavaScript errors, including Hono's `HTTPException`, pass through unchanged. Hono can then handle both using its documented error handling.
 - **Versions.** The adapter supports Hono 4 and is tested with version 4.13.13.
 
 **Typed endpoints.** `EndpointHandler.make(contract, handler)` captures the contract's types and returns a `route<'env>` that no longer exposes the endpoint's type parameters. This lets one router register endpoints with different types without casts or a heterogeneous collection. Both adapters use core's `Dispatch.run` for request processing, so the response format is defined in one place. The adapter supplies raw parameters and the body, then sends the returned `{status, body}` response. Processing follows this order:
@@ -98,8 +98,8 @@ For examples, choose Hono in the guides. [Getting started](getting-started.md) c
 
 - **`Router.t` is the Express app.** You can bind `app.listen` or any other unwrapped Express API with an external. There is no `'env` parameter because Express has no bindings object. Read runtime configuration from `process.env`.
 - **Native handlers and middleware.** Plain route handlers use `(req, res) => promise<unit>`, and middleware uses `(req, res, next) => unit`. Built-in middleware such as `express.json()` and `express.static` can be bound with a single external.
-- **Errors.** Express 5 forwards rejected handler promises to its error handler. `Router.get`, `Router.post`, and `Router.use` convert raw ReScript exceptions to JavaScript `Error` objects so Express can log a stack trace. Express's default error handler includes the stack in the response unless `NODE_ENV=production`. Typed endpoint exceptions are handled by resAPI before they reach that handler.
-- **Request bodies.** `Router.register` adds `express.text({type: () => true})` before each POST handler. This gives `Dispatch` the raw body so it can report `malformed_json` in the same way as on Hono. If an earlier `express.json()` parser has already read the body, resAPI uses the parsed value.
+- **Errors.** Express 5 forwards rejected handler promises to its error handler. `Router.get`, `Router.post`, `Router.put`, and `Router.use` convert raw ReScript exceptions to JavaScript `Error` objects so Express can log a stack trace. Express's default error handler includes the stack in the response unless `NODE_ENV=production`. Typed endpoint exceptions are handled by resAPI before they reach that handler.
+- **Request bodies.** `Router.register` adds `express.text({type: () => true})` before each POST and PUT handler. This gives `Dispatch` the raw body so it can report `malformed_json` in the same way as on Hono. If an earlier `express.json()` parser has already read the body, resAPI uses the parsed value.
 - **Body parsers and auth.** Because `register` adds its parser to each route, middleware registered before that route can check auth before the body is read. A global body parser registered before auth handles parser failures first. The guide therefore recommends scoping body parsers to the routes that need them.
 
 For examples, choose Express in the guides. [Getting started](getting-started.md) lists supported versions, [Middleware and auth](middleware.md) explains how to pass values through a request, and [Request bodies](request-bodies.md) covers parsers, size limits, and content types.
@@ -121,7 +121,7 @@ Endpoints declare their expected failures:
 Endpoint.get(...)->Endpoint.withErrors(errorCodec, ~status=error => switch error { | NotFound => 404 })
 ```
 
-- **`noError`.** `get` and `post` set the error type to `Endpoint.noError`, an abstract type with no values. Until errors are declared, the handler cannot return `Error`. `withErrors` only accepts a `noError` contract, so errors can be declared only once.
+- **`noError`.** `get`, `post`, and `put` set the error type to `Endpoint.noError`, an abstract type with no values. Until errors are declared, the handler cannot return `Error`. `withErrors` only accepts a `noError` contract, so errors can be declared only once.
 - **Status mapping.** The contract maps each application error to an HTTP status, keeping `Codec.t` focused on JSON encoding and decoding. A status outside 400–599 is treated as a server bug and returns an internal 500.
 - **Response format.** The response uses the declared status and a body of `{"applicationError": <encoded error>}`. resAPI's validation and internal errors use `{"error": {...}}`, so the client can distinguish them.
 - **Client handling.** A body with an `applicationError` key must decode with the contract's error codec. If decoding fails, or the endpoint declares no errors, the result is `InvalidResponse`. Other non-2xx responses become `Unauthorized` for status 401/403, or `UnexpectedStatus` otherwise.
@@ -141,7 +141,7 @@ Bugs in the calling code reject the promise instead of returning an error result
 
 ## Client
 
-`Client.call` accepts a contract without a body, while `Client.callWithBody` accepts a POST contract and its body. Both take typed path parameters. Separate functions let the compiler catch missing or unexpected bodies without simulating overloads.
+`Client.call` accepts a contract without a body, while `Client.callWithBody` accepts a POST or PUT contract and its body. Both take typed path parameters. Separate functions let the compiler catch missing or unexpected bodies without simulating overloads.
 
 - **URLs.** The client preserves the path prefix in `baseUrl`. For example, `https://x.dev/api/` combined with `/accounts/:id` produces `https://x.dev/api/accounts/123`. Parameter values are percent-encoded.
 - **Error handling.** Only the `fetch` call is inside the network error handler. Codec failures and HTTP statuses are classified separately, so codec bugs are never reported as network errors. An invalid `baseUrl` throws because it is a configuration error.

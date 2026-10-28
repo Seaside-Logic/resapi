@@ -68,6 +68,20 @@ test("express: typed POST decodes params and body, whatever the content type", a
   await expectError(await post("/orgs/acme/members/abc", "{}"), 400, "invalid_params", ["member"]);
 });
 
+test("express: simple PUT route", async () => {
+  assert.equal(await (await request("/hello/Ada", { method: "PUT" })).text(), "PUT");
+});
+
+test("express: typed PUT decodes params and body, and rejects a bad body", async () => {
+  const put = body => request("/accounts/a1", { method: "PUT", body });
+  const res = await put(JSON.stringify({ name: "Bea" }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { id: "a1", name: "Bea" });
+  await expectError(await put("{not json"), 400, "malformed_json");
+  await expectError(await put(JSON.stringify({ name: 1 })), 400, "invalid_body", ["name"]);
+  assert.equal((await post("/accounts/a1", JSON.stringify({ name: "Bea" }))).status, 404);
+});
+
 test("express: malformed JSON, an empty body and a bad body are 400s", async () => {
   await expectError(await post("/accounts", "{not json"), 400, "malformed_json");
   await expectError(await request("/accounts", { method: "POST" }), 400, "malformed_json");
