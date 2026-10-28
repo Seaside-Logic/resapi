@@ -23,12 +23,13 @@ type server
 /** A rejected handler goes to Express's error handler. */
 let get: (t, string, handler) => t
 let post: (t, string, handler) => t
+let put: (t, string, handler) => t
 
 /** Runs for every request whose path starts with `~path` (default all), including unmatched routes.
     The first `use` is the outermost layer. */
 let use: (t, ~path: string=?, middleware) => t
 
-/** POST endpoints get a raw-text body parser (100kb limit). A body already parsed upstream is used as is. */
+/** POST and PUT endpoints get a raw-text body parser (100kb limit). A body already parsed upstream is used as is. */
 let register: (t, EndpointHandler.route) => t
 
 /** A plain route for every HTTP method. For unmatched requests, add a last `use` (Express has no
