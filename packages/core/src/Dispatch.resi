@@ -17,7 +17,7 @@ let errorResponse: (
   ~path: array<string>=?,
 ) => response
 
-/** `readBody` is called only for POST, after params decode. `handle` must return one of the contract's
+/** `readBody` is called only for POST and PUT, after params decode. `handle` must return one of the contract's
     declared errors. Any exception from a codec, `handle` or reading the body is logged and answered
     with a 500 that reveals nothing. */
 let run: (
