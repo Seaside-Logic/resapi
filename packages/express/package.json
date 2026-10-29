@@ -1,6 +1,6 @@
 {
   "name": "@resapi/express",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Express server adapter for resAPI contracts.",
   "license": "MIT",
   "homepage": "https://resapi.dev",
@@ -32,7 +32,7 @@
     "rescript": "^12.3.1"
   },
   "dependencies": {
-    "@resapi/core": "^0.2.0"
+    "@resapi/core": "^0.3.0"
   },
   "devDependencies": {
     "express": "5.2.1"
