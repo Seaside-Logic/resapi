@@ -13,6 +13,7 @@ type middleware<'env> = (Context.t<'env>, next) => promise<option<Fetch.Response
 @module("hono") @new external make: unit => t<'env> = "Hono"
 @send external honoGet: (t<'env>, string, handler<'env>) => t<'env> = "get"
 @send external honoPost: (t<'env>, string, handler<'env>) => t<'env> = "post"
+@send external honoPut: (t<'env>, string, handler<'env>) => t<'env> = "put"
 @send external honoUse: (t<'env>, middleware<'env>) => t<'env> = "use"
 @send external honoUseAt: (t<'env>, string, middleware<'env>) => t<'env> = "use"
 @send external honoAll: (t<'env>, string, handler<'env>) => t<'env> = "all"
@@ -43,6 +44,7 @@ let catchExceptions = (handler: handler<'env>): handler<'env> =>
 
 let get = (router, path, handler) => router->honoGet(path, catchExceptions(handler))
 let post = (router, path, handler) => router->honoPost(path, catchExceptions(handler))
+let put = (router, path, handler) => router->honoPut(path, catchExceptions(handler))
 let all = (router, path, handler) => router->honoAll(path, catchExceptions(handler))
 let notFound = (router, handler) => router->honoNotFound(catchExceptions(handler))
 
@@ -61,6 +63,7 @@ let register = (router, route: EndpointHandler.route<'env>) =>
   switch route.method {
   | Get => router->honoGet(route.path, route.run)
   | Post => router->honoPost(route.path, route.run)
+  | Put => router->honoPut(route.path, route.run)
   }
 
 let assertRegistered = (router, endpoints: array<Endpoint.any>) => {

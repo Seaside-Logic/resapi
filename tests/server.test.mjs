@@ -28,6 +28,10 @@ test("simple POST route reads the body", async () => {
   assert.equal(await (await request("/echo", { method: "POST", body: "ping" })).text(), "ping");
 });
 
+test("simple PUT route reads the body", async () => {
+  assert.equal(await (await request("/echo", { method: "PUT", body: "ping" })).text(), "ping");
+});
+
 test("method mismatch and unknown routes are 404", async () => {
   assert.equal((await request("/echo")).status, 404);
   assert.equal((await request("/nope")).status, 404);
@@ -72,6 +76,16 @@ test("typed POST decodes params and body", async () => {
   const res = await post("/orgs/acme/members/42", JSON.stringify({ name: "Ann" }));
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { id: "acme/42", name: "Ann" });
+});
+
+test("typed PUT decodes params and body, and rejects a bad body", async () => {
+  const put = body => request("/accounts/a1", { method: "PUT", body });
+  const res = await put(JSON.stringify({ name: "Bea" }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { id: "a1", name: "Bea" });
+  await expectError(await put("{not json"), 400, "malformed_json");
+  await expectError(await put(JSON.stringify({ name: 1 })), 400, "invalid_body", ["name"]);
+  assert.equal((await post("/accounts/a1", JSON.stringify({ name: "Bea" }))).status, 404);
 });
 
 test("invalid params are rejected with their path", async () => {

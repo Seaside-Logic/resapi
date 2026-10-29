@@ -113,7 +113,7 @@ A few details to keep in mind:
 
 - **Define contracts and codecs at module top level.** `SuryCodec.make` compiles Sury's validators when you call it. Cloudflare Workers don't allow that compilation during a request.
 - **Use `~params=Codec.unit` for routes without path parameters.** GET contracts don't have a request body.
-- **Route parameters must match the codec.** `Endpoint.get` and `Endpoint.post` check this when the contract is created. For example, using `"/accounts/:accountId"` with a `{id}` codec throws an exception and prevents the module from loading on either the server or the client.
+- **Route parameters must match the codec.** `Endpoint.get`, `Endpoint.post`, and `Endpoint.put` check this when the contract is created. For example, using `"/accounts/:accountId"` with a `{id}` codec throws an exception and prevents the module from loading on either the server or the client.
 - **Declare application errors with `withErrors`.** Each error maps to a 4xx or 5xx HTTP status. A handler can return `Error` only if its contract declares application errors.
 
 ## 3. Implement the server
@@ -150,7 +150,7 @@ let app: Router.t<unit> =
 ```
 
 - **`Router.make()` creates a Hono app.** Its type is `Router.t`, and you can export it directly as a Worker. To use Hono APIs that resAPI doesn't wrap, such as `app.onError` or `app.route`, define a ReScript external that accepts `Router.t`.
-- **`Router.get` and `Router.post` add plain Hono routes.** Their handlers receive a Hono context and return a Fetch `Response`.
+- **`Router.get`, `Router.post`, and `Router.put` add plain Hono routes.** Their handlers receive a Hono context and return a Fetch `Response`.
 - **`Router.register` adds a typed endpoint.** The handler receives the Hono context and the decoded request data, such as `params` or `body`. Return `Ok(response)` for success or `Error(declaredError)` for an application error. resAPI encodes and sends the response.
 
 </div>
@@ -186,7 +186,7 @@ let app =
 ```
 
 - **`Router.make()` creates an Express app.** Its type is `Router.t`. To use Express APIs that resAPI doesn't wrap, such as `app.set`, define a ReScript external that accepts `Router.t`.
-- **`Router.get` and `Router.post` add plain Express routes.** Their handlers have the signature `(req, res) => promise<unit>`.
+- **`Router.get`, `Router.post`, and `Router.put` add plain Express routes.** Their handlers have the signature `(req, res) => promise<unit>`.
 - **`Router.register` adds a typed endpoint.** The handler receives the Express request (`Req.t`) and the decoded request data, such as `params` or `body`. Return `Ok(response)` for success or `Error(declaredError)` for an application error. resAPI encodes and sends the response.
 
 </div>

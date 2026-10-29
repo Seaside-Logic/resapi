@@ -17,6 +17,7 @@ let app: Router.t<unit> =
   )
   ->Router.get("/throws", async _ctx => throw(Not_found))
   ->Router.post("/echo", async ctx => Fetch.Response.fromString(await ctx->Context.text))
+  ->Router.put("/echo", async ctx => Fetch.Response.fromString(await ctx->Context.text))
   ->Router.register(
     TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch (params.id, accounts->Dict.get(params.id)) {
@@ -35,6 +36,12 @@ let app: Router.t<unit> =
   ->Router.register(
     TestApi.addMember->EndpointHandler.make(async (_ctx, {params, body}) => Ok({
       id: `${params.org}/${params.member->Int.toString}`,
+      name: body.name,
+    })),
+  )
+  ->Router.register(
+    TestApi.updateAccount->EndpointHandler.make(async (_ctx, {params, body}) => Ok({
+      id: params.id,
       name: body.name,
     })),
   )

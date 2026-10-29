@@ -105,6 +105,14 @@ let addMember = Endpoint.post(
   ~response=accountCodec,
 )
 
+// Shares GET /accounts/:id's path, so a method mismatch on it is a 404.
+let updateAccount = Endpoint.put(
+  "/accounts/:id",
+  ~params=paramsCodec,
+  ~body=newAccountCodec,
+  ~response=accountCodec,
+)
+
 // Its response encoder throws, for the server's internal-error path.
 let brokenEncoder = Endpoint.get(
   "/broken",

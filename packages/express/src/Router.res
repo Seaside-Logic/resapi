@@ -16,8 +16,10 @@ type server
 @module("express") external text: {"type": string => bool} => middleware = "text"
 @send external expressGet: (t, string, handler) => unit = "get"
 @send external expressPost: (t, string, handler) => unit = "post"
+@send external expressPut: (t, string, handler) => unit = "put"
 @send external expressAll: (t, string, handler) => unit = "all"
 @send external expressPostWith: (t, string, middleware, handler) => unit = "post"
+@send external expressPutWith: (t, string, middleware, handler) => unit = "put"
 @send external expressUse: (t, middleware) => unit = "use"
 @send external expressUseAt: (t, string, middleware) => unit = "use"
 
@@ -48,6 +50,11 @@ let get = (router, path, handler) => {
 
 let post = (router, path, handler) => {
   router->expressPost(path, catchExceptions(handler))
+  router
+}
+
+let put = (router, path, handler) => {
+  router->expressPut(path, catchExceptions(handler))
   router
 }
 
@@ -83,6 +90,7 @@ let register = (router, route: EndpointHandler.route) => {
   switch route.method {
   | Get => router->expressGet(route.path, route.run)
   | Post => router->expressPostWith(route.path, rawText, route.run)
+  | Put => router->expressPutWith(route.path, rawText, route.run)
   }
   router
 }

@@ -144,8 +144,8 @@ let requestInit = (
       headers: Fetch.HeadersInit.fromDict(mergeHeaders([client.headers, headers])),
       ?signal,
     }
-  | Post => {
-      method: "POST",
+  | Post | Put => {
+      method: Endpoint.methodName(contract.method),
       headers: Fetch.HeadersInit.fromDict(
         mergeHeaders([client.headers, dict{"content-type": "application/json"}, headers]),
       ),

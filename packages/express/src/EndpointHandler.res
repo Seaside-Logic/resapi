@@ -15,7 +15,7 @@ type route = {
   run: (Req.t, Res.t) => promise<unit>,
 }
 
-// Router.register mounts POST routes behind `express.text`, so the body is the raw string. A body
+// Router.register mounts POST and PUT routes behind `express.text`, so the body is the raw string. A body
 // already parsed by an upstream `express.json()` is used as it is. No body at all parses as "".
 let rawBody = req =>
   switch req->Req.body->Nullable.toOption {

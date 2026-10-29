@@ -16,6 +16,7 @@ type middleware<'env> = (Context.t<'env>, next) => promise<option<ResApi.Fetch.R
 
 let get: (t<'env>, string, handler<'env>) => t<'env>
 let post: (t<'env>, string, handler<'env>) => t<'env>
+let put: (t<'env>, string, handler<'env>) => t<'env>
 
 /** Runs for every request whose path matches `~path` (Hono pattern, default all), including unmatched
     routes. The first `use` is the outermost layer. */

@@ -2,7 +2,7 @@
 // it references no server or runtime code. Server adapters turn contracts into routes.
 // Constructors check the route's params against the params codec and throw on a mismatch (RouteCheck).
 
-type method = Get | Post
+type method = Get | Post | Put
 
 type noError
 
@@ -48,6 +48,19 @@ let post = (path, ~params, ~body, ~response) => {
   }
 }
 
+let put = (path, ~params, ~body, ~response) => {
+  RouteCheck.assertValid(path, params)
+  {
+    method: Put,
+    path,
+    paramsCodec: params,
+    bodyCodec: body,
+    responseCodec: response,
+    errorCodec: noErrorCodec,
+    errorStatus: _ => 500,
+  }
+}
+
 let withErrors = (contract: t<'p, 'b, 'r, noError>, errorCodec: Codec.t<'e>, ~status) => {
   ...contract,
   errorCodec,
@@ -62,4 +75,5 @@ let methodName = method =>
   switch method {
   | Get => "GET"
   | Post => "POST"
+  | Put => "PUT"
   }

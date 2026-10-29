@@ -18,6 +18,7 @@ let app =
   ->Router.get("/hello/:name", async (req, res) =>
     res->Res.send(`Hello, ${req->Req.params->Dict.getUnsafe("name")}!`)
   )
+  ->Router.put("/hello/:name", async (req, res) => res->Res.send(req->Req.method))
   ->Router.get("/throws", async (_req, _res) => throw(Not_found))
   ->Router.get("/send-then-throw", async (_req, res) => {
     res->Res.send("sent")
@@ -38,6 +39,12 @@ let app =
   ->Router.register(
     TestApi.addMember->EndpointHandler.make(async (_req, {params, body}) => Ok({
       id: `${params.org}/${params.member->Int.toString}`,
+      name: body.name,
+    })),
+  )
+  ->Router.register(
+    TestApi.updateAccount->EndpointHandler.make(async (_req, {params, body}) => Ok({
+      id: params.id,
       name: body.name,
     })),
   )

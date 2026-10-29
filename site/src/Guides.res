@@ -40,7 +40,7 @@ let all = [
   {
     slug: "request-bodies",
     title: "Request bodies",
-    summary: "How typed POST bodies are read, which content types work, and how to limit their size.",
+    summary: "How typed POST and PUT bodies are read, which content types work, and how to limit their size.",
     section: Guides,
     body: requestBodies,
   },
