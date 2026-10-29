@@ -5,10 +5,10 @@
   "dependencies": {
     "@resapi/core": "*",
     "@resapi/hono": "*",
-    "hono": "4.13.13",
+    "hono": "4.13.14",
     "@resapi/sury": "*",
     "sury": "11.0.0",
     "@resapi/express": "*",
-    "express": "5.2.1"
+    "express": "5.3.0"
   }
 }

@@ -10,7 +10,7 @@
     "@resapi/core": "*",
     "@resapi/hono": "*",
     "@resapi/sury": "*",
-    "hono": "4.13.13",
+    "hono": "4.13.14",
     "sury": "11.0.0",
     "sury-ppx": "11.0.0"
   },
