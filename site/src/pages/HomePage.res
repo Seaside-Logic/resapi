@@ -216,7 +216,7 @@ let make = () => {
         </table>
       </div>
       <p className="note">
-        {React.string("0.2.0 is a preview: the API may change in 0.x releases. See the ")}
+        {React.string("0.3.0 is a preview: the API may change in 0.x releases. See the ")}
         <a
           href="https://github.com/Seaside-Logic/resapi/blob/main/CHANGELOG.md"
           target="_blank"

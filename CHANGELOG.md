@@ -2,6 +2,27 @@
 
 All four packages (`@resapi/core`, `@resapi/hono`, `@resapi/express`, `@resapi/sury`) are released together with the same version.
 
+## 0.3.0 (preview)
+
+Adds PUT endpoints.
+
+### Breaking changes
+
+- **`Endpoint.method`** has a new `Put` case. A `switch` on it that lists every case needs a `Put` arm.
+
+### Added
+
+- **PUT contracts:** `Endpoint.put(path, ~params, ~body, ~response)`, with the same checks as `post`. The client sends a JSON body, and both adapters read it as they do for POST (Express mounts PUT routes behind the same raw-text parser).
+- **`Router.put`** (both adapters) for plain routes.
+
+### Migrating from 0.2.0
+
+- Add a `Put` arm to any exhaustive match on `Endpoint.method`. Nothing else changes.
+
+### Known limitations
+
+The 0.2.0 limitations still apply, except that PUT is now supported. PATCH and DELETE are planned.
+
 ## 0.2.0 (preview)
 
 These changes come from testing 0.1.0 against a real application (WealthJack) and a second, deliberately different Express service. The main one: auth is ordinary Hono or Express middleware, and resAPI adds two small helpers so the rejection and the signed-in user are typed on both ends.

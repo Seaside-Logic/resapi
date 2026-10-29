@@ -14,7 +14,7 @@ How a resAPI version gets from a commit to npm. Every step that makes something 
 1. Make sure `main` is green in CI and the [CHANGELOG](../CHANGELOG.md) entry is written.
 2. Set the version in all four `packages/*/package.json`, plus the `@resapi/core` range in the three adapters.
 3. Re-read `@rescript/webapi`'s Fetch modules (`src/fetch/*.res`, `src/event/Abort*.res` on its `main`) and update `packages/core/src/Fetch.res` if anything resAPI mirrors was renamed. Update the mirrored-commit note at the top of the file.
-4. From the repo root, run `npm install --package-lock-only` to update the lockfile (plain `npm install` skips the workspace versions when `node_modules` is already up to date), then `npm run release:check`. It runs formatting, tests, the isolation check, the Workers tests and the tarball and doc install checks.
+4. From the repo root, run `npm install --package-lock-only` to update the lockfile (plain `npm install` skips the workspace versions when `node_modules` is already up to date), then `npm run release:check`. It runs the CHANGELOG check, formatting, tests, the isolation check, the Workers tests and the tarball and doc install checks.
 5. Inspect the tarballs yourself: `npm pack --workspace=@resapi/<pkg> --dry-run`.
 6. Commit as `release: v<version>`.
 7. Tag and push: `git tag v<version> && git push origin main v<version>`.
