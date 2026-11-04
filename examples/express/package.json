@@ -9,7 +9,7 @@
     "@resapi/core": "*",
     "@resapi/express": "*",
     "@resapi/sury": "*",
-    "express": "5.2.1",
+    "express": "5.3.0",
     "sury": "11.0.0",
     "sury-ppx": "11.0.0"
   }
