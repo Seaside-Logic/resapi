@@ -26,8 +26,9 @@ type server
 @send external listen: (t, int, unit => unit) => server = "listen"
 @send external close: server => unit = "close"
 
-// Express's error handler logs `err.stack`, which a raw ReScript exception lacks: it logs as
-// "[object Object]". Rethrowing it as an Error keeps the log readable. JS errors pass untouched.
+// Express's error page reads `err.stack`, which a raw ReScript exception lacks: outside production it
+// shows "[object Object]", and Express before 5.3 logs that too. Rethrowing it as an Error keeps both
+// readable. JS errors pass untouched.
 let rethrowAsError = exn =>
   switch exn {
   | JsExn(e) => JsExn.throw(e)
