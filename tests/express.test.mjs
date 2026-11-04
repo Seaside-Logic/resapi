@@ -48,7 +48,7 @@ test("express: a ReScript exception in a simple route is a 500 from Express's er
   t.mock.method(console, "error", () => {});
   assert.equal((await request("/throws")).status, 500);
   const logged = console.error.mock.calls[0].arguments[0];
-  assert.match(logged, /^Error: Uncaught ReScript exception: .*Not_found/);
+  assert.match(logged.message, /^Uncaught ReScript exception: .*Not_found/);
 });
 
 test("express: typed GET receives percent-decoded params", async () => {
@@ -132,7 +132,7 @@ test("express: body-parser rejections are Express's own responses", async t => {
 test("express: a middleware's synchronous exception is a 500 from Express's error handler", async t => {
   t.mock.method(console, "error", () => {});
   assert.equal((await request("/middleware-throws")).status, 500);
-  assert.match(console.error.mock.calls[0].arguments[0], /^Error: Uncaught ReScript exception: .*Failure/);
+  assert.match(console.error.mock.calls[0].arguments[0].message, /^Uncaught ReScript exception: .*Failure/);
 });
 
 test("express: an exception after the response is sent leaves the response intact", async t => {
