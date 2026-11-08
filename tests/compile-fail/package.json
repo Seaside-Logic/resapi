@@ -5,7 +5,7 @@
   "dependencies": {
     "@resapi/core": "*",
     "@resapi/sury": "*",
-    "sury": "11.0.0",
+    "sury": "11.1.0",
     "@resapi/test-fixtures": "*",
     "@resapi/hono": "*",
     "@resapi/express": "*"
