@@ -32,7 +32,7 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "sury-ppx@11.0.0": true,
-    "workerd@1.20261006.1": true
+    "sury-ppx@11.1.0": true,
+    "workerd@1.20261023.1": true
   }
 }
