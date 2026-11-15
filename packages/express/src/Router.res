@@ -17,6 +17,7 @@ type server
 @send external expressGet: (t, string, handler) => unit = "get"
 @send external expressPost: (t, string, handler) => unit = "post"
 @send external expressPut: (t, string, handler) => unit = "put"
+@send external expressDelete: (t, string, handler) => unit = "delete"
 @send external expressAll: (t, string, handler) => unit = "all"
 @send external expressPostWith: (t, string, middleware, handler) => unit = "post"
 @send external expressPutWith: (t, string, middleware, handler) => unit = "put"
@@ -59,6 +60,11 @@ let put = (router, path, handler) => {
   router
 }
 
+let delete = (router, path, handler) => {
+  router->expressDelete(path, catchExceptions(handler))
+  router
+}
+
 let all = (router, path, handler) => {
   router->expressAll(path, catchExceptions(handler))
   router
@@ -92,6 +98,7 @@ let register = (router, route: EndpointHandler.route) => {
   | Get => router->expressGet(route.path, route.run)
   | Post => router->expressPostWith(route.path, rawText, route.run)
   | Put => router->expressPutWith(route.path, rawText, route.run)
+  | Delete => router->expressDelete(route.path, route.run)
   }
   router
 }

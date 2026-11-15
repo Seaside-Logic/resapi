@@ -24,6 +24,7 @@ type server
 let get: (t, string, handler) => t
 let post: (t, string, handler) => t
 let put: (t, string, handler) => t
+let delete: (t, string, handler) => t
 
 /** Runs for every request whose path starts with `~path` (default all), including unmatched routes.
     The first `use` is the outermost layer. */
