@@ -1,13 +1,13 @@
 // A contract describes an endpoint's wire format and is safe to share with clients: it references no
 // server or runtime code. Server adapters turn contracts into routes.
 
-type method = Get | Post | Put
+type method = Get | Post | Put | Delete
 
 /** The error type of an endpoint that declares no application errors. It has no values, so a handler
     for such an endpoint cannot return `Error(_)`. */
 type noError
 
-/** Read-only outside this module: contracts are built with `get`/`post`/`put`, which check the route. */
+/** Read-only outside this module: contracts are built with `get`/`post`/`put`/`delete`, which check the route. */
 type t<'params, 'body, 'response, 'error> = private {
   method: method,
   path: string,
@@ -38,6 +38,10 @@ let put: (
   ~response: Codec.t<'r>,
 ) => t<'p, 'b, 'r, noError>
 
+/** Like `get`, a DELETE contract has no request body. Throws if the route's `:params` don't match the
+    params codec (see `RouteCheck`). */
+let delete: (string, ~params: Codec.t<'p>, ~response: Codec.t<'r>) => t<'p, unit, 'r, noError>
+
 /** Declares the endpoint's application errors and the HTTP status (4xx or 5xx) each one is sent with. */
 let withErrors: (t<'p, 'b, 'r, noError>, Codec.t<'e>, ~status: 'e => int) => t<'p, 'b, 'r, 'e>
 
@@ -47,5 +51,5 @@ type any = private {method: method, path: string}
 
 let any: t<'p, 'b, 'r, 'e> => any
 
-/** `"GET"`, `"POST"`, or `"PUT"`. */
+/** `"GET"`, `"POST"`, `"PUT"`, or `"DELETE"`. */
 let methodName: method => string

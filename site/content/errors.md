@@ -42,7 +42,7 @@ resAPI catches exceptions raised while processing a typed endpoint:
 - The caller receives `500 {"error": {"kind": "internal", "message": "Internal Server Error", "path": []}}`, without the exception details.
 - The exception does **not** reach Hono's `onError` or Express's error middleware. Both adapters handle it the same way.
 
-Plain routes (`Router.get`/`post`/`put`) and middleware (`Router.use`) use the framework's error handling: Hono's `onError` or Express's error middleware. resAPI converts raw ReScript exceptions to JavaScript `Error` objects so Hono can handle them and Express can log a stack trace. Existing JavaScript errors, including Hono's `HTTPException`, pass through unchanged. By default, both frameworks log unhandled errors and return HTTP 500. Express also includes the stack trace in the response unless `NODE_ENV=production`.
+Plain routes (`Router.get`/`post`/`put`/`delete`) and middleware (`Router.use`) use the framework's error handling: Hono's `onError` or Express's error middleware. resAPI converts raw ReScript exceptions to JavaScript `Error` objects so Hono can handle them and Express can log a stack trace. Existing JavaScript errors, including Hono's `HTTPException`, pass through unchanged. By default, both frameworks log unhandled errors and return HTTP 500. Express also includes the stack trace in the response unless `NODE_ENV=production`.
 
 On Express, body-parser failures occur before resAPI processes the request, so Express determines their response format. Examples include a body that exceeds the size limit (413), an unsupported charset (415), and malformed JSON rejected by an upstream `express.json()` parser (400). See [Request bodies](request-bodies.md).
 

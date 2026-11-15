@@ -139,8 +139,8 @@ let requestInit = (
 ): Fetch.Request.requestInit => {
   let signal = signal->Option.map(Nullable.make)
   switch contract.method {
-  | Get => {
-      method: "GET",
+  | Get | Delete => {
+      method: Endpoint.methodName(contract.method),
       headers: Fetch.HeadersInit.fromDict(mergeHeaders([client.headers, headers])),
       ?signal,
     }

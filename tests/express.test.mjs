@@ -82,6 +82,19 @@ test("express: typed PUT decodes params and body, and rejects a bad body", async
   assert.equal((await post("/accounts/a1", JSON.stringify({ name: "Bea" }))).status, 404);
 });
 
+test("express: simple DELETE route", async () => {
+  assert.equal(await (await request("/hello/Ada", { method: "DELETE" })).text(), "DELETE");
+});
+
+test("express: typed DELETE decodes params, ignores a request body, and sends a declared error", async () => {
+  const res = await request("/accounts/a1", { method: "DELETE", body: "{not json" });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { id: "a1", name: "Ann" });
+  const notFound = await request("/accounts/missing", { method: "DELETE" });
+  assert.equal(notFound.status, 404);
+  assert.deepEqual(await notFound.json(), { applicationError: "not_found" });
+});
+
 test("express: malformed JSON, an empty body and a bad body are 400s", async () => {
   await expectError(await post("/accounts", "{not json"), 400, "malformed_json");
   await expectError(await request("/accounts", { method: "POST" }), 400, "malformed_json");

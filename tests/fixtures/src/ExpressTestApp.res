@@ -19,6 +19,7 @@ let app =
     res->Res.send(`Hello, ${req->Req.params->Dict.getUnsafe("name")}!`)
   )
   ->Router.put("/hello/:name", async (req, res) => res->Res.send(req->Req.method))
+  ->Router.delete("/hello/:name", async (req, res) => res->Res.send(req->Req.method))
   ->Router.get("/throws", async (_req, _res) => throw(Not_found))
   ->Router.get("/send-then-throw", async (_req, res) => {
     res->Res.send("sent")
@@ -47,6 +48,14 @@ let app =
       id: params.id,
       name: body.name,
     })),
+  )
+  ->Router.register(
+    TestApi.deleteAccount->EndpointHandler.make(async (_req, {params}) =>
+      switch accounts->Dict.get(params.id) {
+      | Some(account) => Ok(account)
+      | None => Error(TestApi.NotFound)
+      }
+    ),
   )
   ->Router.register(
     TestApi.brokenEncoder->EndpointHandler.make(async (_req, _) => Ok({id: "x", name: "x"})),

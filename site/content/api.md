@@ -37,10 +37,10 @@ Use `Codec.unit` as `~params` for routes without path parameters. In a decode er
 ### `Endpoint`
 
 ```rescript
-type method = Get | Post | Put
+type method = Get | Post | Put | Delete
 type noError  // no values: the error type of endpoints that declare none
 
-type t<'params, 'body, 'response, 'error> = private {  // readable, but built only by get/post/put
+type t<'params, 'body, 'response, 'error> = private {  // readable, but built only by get/post/put/delete
   method: method,
   path: string,
   paramsCodec: Codec.t<'params>,
@@ -53,13 +53,14 @@ type t<'params, 'body, 'response, 'error> = private {  // readable, but built on
 let get: (string, ~params: Codec.t<'p>, ~response: Codec.t<'r>) => t<'p, unit, 'r, noError>
 let post: (string, ~params: Codec.t<'p>, ~body: Codec.t<'b>, ~response: Codec.t<'r>) => t<'p, 'b, 'r, noError>
 let put: (string, ~params: Codec.t<'p>, ~body: Codec.t<'b>, ~response: Codec.t<'r>) => t<'p, 'b, 'r, noError>
+let delete: (string, ~params: Codec.t<'p>, ~response: Codec.t<'r>) => t<'p, unit, 'r, noError>
 let withErrors: (t<'p, 'b, 'r, noError>, Codec.t<'e>, ~status: 'e => int) => t<'p, 'b, 'r, 'e>
 
 type any = private {method: method, path: string}  // a contract with its types erased
 let any: t<'p, 'b, 'r, 'e> => any
 ```
 
-- **Route checking:** `get`, `post`, and `put` check that the route parameter names match the parameter codec and throw if they detect a mismatch. See `RouteCheck` for details and limitations. Define contracts at module top level so a mismatch prevents the module from loading.
+- **Route checking:** `get`, `post`, `put`, and `delete` check that the route parameter names match the parameter codec and throw if they detect a mismatch. See `RouteCheck` for details and limitations. Define contracts at module top level so a mismatch prevents the module from loading.
 - **`withErrors`:** declares the endpoint's application error type and maps each error to a status. `~status` must return a value from 400 to 599.
 - **`any`:** erases the contract's type parameters so contracts with different types can share a list. Pass a list of all your contracts to the adapter's `Router.assertRegistered(router, list)` in a test to catch missing registrations before they cause unexpected 404 responses.
 
@@ -72,7 +73,7 @@ let check: (string, Codec.t<'p>) => outcome
 let assertValid: (string, Codec.t<'p>) => unit  // throws on Invalid
 ```
 
-`Endpoint.get`, `Endpoint.post`, and `Endpoint.put` call `assertValid` when creating a contract. Tests can call `check` to inspect the result directly. `CannotValidate` means the codec rejected the sample value for an existing route parameter, for example because it requires a specific string format. The [architecture document](architecture.md#route-checking-at-construction) explains how this check works and its limitations.
+`Endpoint.get`, `Endpoint.post`, `Endpoint.put`, and `Endpoint.delete` call `assertValid` when creating a contract. Tests can call `check` to inspect the result directly. `CannotValidate` means the codec rejected the sample value for an existing route parameter, for example because it requires a specific string format. The [architecture document](architecture.md#route-checking-at-construction) explains how this check works and its limitations.
 
 ### `Key`
 
@@ -119,7 +120,7 @@ let message: (error<'e>, ~declared: 'e => string) => string
 - **Headers:** for JSON requests, headers merge in this order: client defaults, resAPI's `content-type`, then headers supplied to the call. Later values override earlier ones. Header names are case-insensitive.
 - **`~signal`:** accepts a Fetch `AbortSignal`. If the signal is aborted or times out, the call returns `Error(Aborted)`.
 - **`baseUrl`:** the client preserves its path prefix. A trailing slash is optional. An invalid URL causes the call to throw.
-- **`call` and `callWithBody`:** use `call` for contracts without a request body and `callWithBody` for POST and PUT contracts.
+- **`call` and `callWithBody`:** use `call` for contracts without a request body (GET and DELETE) and `callWithBody` for POST and PUT contracts.
 - **Exceptions:** both functions reject their promise for bugs in the calling code, such as a missing or non-scalar path parameter, a codec that throws, or an invalid `baseUrl`.
 - **`Unauthorized`:** reports a 401 or 403 that is not a declared application error. The optional `reason` comes from a resAPI `Reject` response.
 - **`message`:** provides a default English message for each error. Supply `~declared` to choose messages for declared application errors.
@@ -208,6 +209,7 @@ let make: unit => t<'env>
 let get: (t<'env>, string, handler<'env>) => t<'env>
 let post: (t<'env>, string, handler<'env>) => t<'env>
 let put: (t<'env>, string, handler<'env>) => t<'env>
+let delete: (t<'env>, string, handler<'env>) => t<'env>
 let use: (t<'env>, ~path: string=?, middleware<'env>) => t<'env>
 let register: (t<'env>, EndpointHandler.route<'env>) => t<'env>
 let all: (t<'env>, string, handler<'env>) => t<'env>       // every HTTP method
@@ -216,7 +218,7 @@ let assertRegistered: (t<'env>, array<Endpoint.any>) => unit  // for tests
 let fetch: (t<'env>, Fetch.Request.t, 'env) => promise<Fetch.Response.t>
 ```
 
-- **The router is a Hono app.** `get`, `post`, `put`, `use`, and `register` modify the app and return it, so you can pipe calls together. You can export the router directly as a Worker.
+- **The router is a Hono app.** `get`, `post`, `put`, `delete`, `use`, and `register` modify the app and return it, so you can pipe calls together. You can export the router directly as a Worker.
 - **`'env`:** describes the environment bindings. If the router never reads `Context.env`, add an explicit type annotation, such as `Router.t<unit>`.
 - **`use`:** accepts native Hono middleware. For example, bind the logger with `@module("hono/logger") external logger: unit => Router.middleware<'env> = "logger"`. Middleware runs in registration order, with the first `use` forming the outermost layer. It also runs for unmatched requests within its path scope.
 - **Exceptions:** plain handlers and middleware use Hono's error handling. By default, unhandled errors are logged and returned as HTTP 500.
@@ -281,6 +283,7 @@ let make: unit => t
 let get: (t, string, handler) => t
 let post: (t, string, handler) => t
 let put: (t, string, handler) => t
+let delete: (t, string, handler) => t
 let use: (t, ~path: string=?, middleware) => t
 let register: (t, EndpointHandler.route) => t
 let all: (t, string, handler) => t                // every HTTP method
