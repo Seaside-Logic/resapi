@@ -65,6 +65,16 @@ test("PUT sends the encoded body as JSON", async () => {
   assert.deepEqual(await requests[0].json(), { name: "Ann" });
 });
 
+test("DELETE sends no body", async () => {
+  const { client, requests } = recording("https://x.dev");
+  const result = await Client.call(client, TestApi.deleteAccount, { id: "a1" });
+  assert.deepEqual(result, { TAG: "Ok", _0: { id: "a1", name: "Ann" } });
+  assert.equal(requests[0].method, "DELETE");
+  assert.equal(requests[0].url, "https://x.dev/accounts/a1");
+  assert.equal(requests[0].headers.get("content-type"), null);
+  assert.equal(requests[0].body, null);
+});
+
 const rejectsWith = message => error => error instanceof Error && message.test(error.message);
 
 test("a missing path param rejects the call with an Error and sends nothing", async () => {

@@ -32,6 +32,10 @@ test("simple PUT route reads the body", async () => {
   assert.equal(await (await request("/echo", { method: "PUT", body: "ping" })).text(), "ping");
 });
 
+test("simple DELETE route", async () => {
+  assert.equal(await (await request("/echo", { method: "DELETE" })).text(), "deleted");
+});
+
 test("method mismatch and unknown routes are 404", async () => {
   assert.equal((await request("/echo")).status, 404);
   assert.equal((await request("/nope")).status, 404);
@@ -86,6 +90,15 @@ test("typed PUT decodes params and body, and rejects a bad body", async () => {
   await expectError(await put("{not json"), 400, "malformed_json");
   await expectError(await put(JSON.stringify({ name: 1 })), 400, "invalid_body", ["name"]);
   assert.equal((await post("/accounts/a1", JSON.stringify({ name: "Bea" }))).status, 404);
+});
+
+test("typed DELETE decodes params, ignores a request body, and sends a declared error", async () => {
+  const res = await request("/accounts/a1", { method: "DELETE", body: "{not json" });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { id: "a1", name: "Ann" });
+  const notFound = await request("/accounts/missing", { method: "DELETE" });
+  assert.equal(notFound.status, 404);
+  assert.deepEqual(await notFound.json(), { applicationError: "not_found" });
 });
 
 test("invalid params are rejected with their path", async () => {

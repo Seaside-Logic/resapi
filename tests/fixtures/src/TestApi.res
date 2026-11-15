@@ -113,6 +113,18 @@ let updateAccount = Endpoint.put(
   ~response=accountCodec,
 )
 
+// Also shares /accounts/:id. Like GET it has no body.
+let deleteAccount = Endpoint.delete(
+  "/accounts/:id",
+  ~params=paramsCodec,
+  ~response=accountCodec,
+)->Endpoint.withErrors(accountErrorCodec, ~status=error =>
+  switch error {
+  | NotFound => 404
+  | AccessDenied => 403
+  }
+)
+
 // Its response encoder throws, for the server's internal-error path.
 let brokenEncoder = Endpoint.get(
   "/broken",

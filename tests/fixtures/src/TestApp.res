@@ -18,6 +18,7 @@ let app: Router.t<unit> =
   ->Router.get("/throws", async _ctx => throw(Not_found))
   ->Router.post("/echo", async ctx => Fetch.Response.fromString(await ctx->Context.text))
   ->Router.put("/echo", async ctx => Fetch.Response.fromString(await ctx->Context.text))
+  ->Router.delete("/echo", async _ctx => Fetch.Response.fromString("deleted"))
   ->Router.register(
     TestApi.getAccount->EndpointHandler.make(async (_ctx, {params}) =>
       switch (params.id, accounts->Dict.get(params.id)) {
@@ -44,6 +45,14 @@ let app: Router.t<unit> =
       id: params.id,
       name: body.name,
     })),
+  )
+  ->Router.register(
+    TestApi.deleteAccount->EndpointHandler.make(async (_ctx, {params}) =>
+      switch accounts->Dict.get(params.id) {
+      | Some(account) => Ok(account)
+      | None => Error(TestApi.NotFound)
+      }
+    ),
   )
   ->Router.register(
     TestApi.badErrorStatus->EndpointHandler.make(async (_ctx, _) => Error(NotFound)),
