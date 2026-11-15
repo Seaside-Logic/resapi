@@ -36,7 +36,7 @@ let applicationErrorResponse = (contract: Endpoint.t<_, _, _, _>, error) => {
 
 let readJsonBody = async (contract: Endpoint.t<_, _, _, _>, readBody) =>
   switch contract.method {
-  | Get => Ok(JSON.Null)
+  | Get | Delete => Ok(JSON.Null)
   | Post | Put =>
     switch readBody() {
     | Parsed(json) => Ok(json)
