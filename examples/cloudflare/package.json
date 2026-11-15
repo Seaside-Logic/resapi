@@ -10,9 +10,9 @@
     "@resapi/core": "*",
     "@resapi/hono": "*",
     "@resapi/sury": "*",
-    "hono": "4.13.16",
-    "sury": "11.0.0",
-    "sury-ppx": "11.0.0"
+    "hono": "4.13.18",
+    "sury": "11.1.0",
+    "sury-ppx": "11.1.0"
   },
   "devDependencies": {
     "wrangler": "4.155.0"
