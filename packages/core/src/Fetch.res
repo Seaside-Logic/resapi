@@ -6,7 +6,9 @@
 //
 // Mirrored from rescript-lang/experimental-rescript-webapi main as of 2026-10-11 (alpha build b1d58f9):
 // src/fetch/{Request,Response,Headers,HeadersInit,BodyInit,Fetch}.res, src/event/{AbortSignal,
-// AbortController}.res. Re-checked for 0.3.0 against main b46bc2c on 2026-10-11: those files are unchanged.
+// AbortController}.res. Re-checked for 0.4.0 against main 4888db2 on 2026-11-15: nothing mirrored here
+// changed (upstream retyped byte streams as Uint8Array and added `type t` aliases to Headers and
+// AbortController).
 // Re-check it at every resAPI release (docs/release-process.md).
 // Abstract types (Headers.t, AbortSignal.t) are subsets of webapi's records: the re-export adds
 // `type t = WebAPI.FetchTypes.headers` and `type t = WebAPI.DOM.abortSignal`.

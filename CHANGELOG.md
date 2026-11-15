@@ -2,6 +2,27 @@
 
 All four packages (`@resapi/core`, `@resapi/hono`, `@resapi/express`, `@resapi/sury`) are released together with the same version.
 
+## 0.4.0 (preview)
+
+Adds DELETE endpoints.
+
+### Breaking changes
+
+- **`Endpoint.method`** has a new `Delete` case. A `switch` on it that lists every case needs a `Delete` arm.
+
+### Added
+
+- **DELETE contracts:** `Endpoint.delete(path, ~params, ~response)`, with the same checks as `get`. Like GET, a DELETE contract has no request body: call it with `Client.call`. The server never reads a body sent with a DELETE.
+- **`Router.delete`** (both adapters) for plain routes.
+
+### Migrating from 0.3.0
+
+- Add a `Delete` arm to any exhaustive match on `Endpoint.method`. Nothing else changes.
+
+### Known limitations
+
+The 0.3.0 limitations still apply, except that DELETE is now supported. PATCH is planned. A successful DELETE is a 200 with a JSON body, like every typed response: there is no 204.
+
 ## 0.3.0 (preview)
 
 Adds PUT endpoints.
