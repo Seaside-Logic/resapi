@@ -35,6 +35,6 @@
     "@resapi/core": "^0.4.0"
   },
   "devDependencies": {
-    "hono": "4.13.18"
+    "hono": "4.13.19"
   }
 }
